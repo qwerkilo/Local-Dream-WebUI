@@ -1,0 +1,19 @@
+Local Dream WebUI
+Copyright 2025 AbrahamPaulJ
+
+This project is a third-party web interface for the Local Dream Android app.
+It is not affiliated with, endorsed by, or part of the Local Dream project.
+
+Local Dream
+  https://github.com/xororz/local-dream
+  Copyright (c) xororz
+  Licensed under the Apache License, Version 2.0
+
+  Local Dream is an Android app that runs Stable Diffusion locally on-device
+  using Snapdragon NPU, CPU, and GPU. This project communicates with its local
+  HTTP API (port 8081) but does not include, modify, or redistribute any part
+  of the Local Dream source code or binaries.
+
+Automask uses the HuggingFace Inference API with the model:
+  mattmdjaga/segformer_b2_clothes
+  https://huggingface.co/mattmdjaga/segformer_b2_clothes

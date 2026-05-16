@@ -1,6 +1,6 @@
 # Local Dream WebUI
 
-A Flask web UI for the [Local Dream](https://github.com/lunar-byte-dev/localdream) Android app's HTTP API.
+A Flask web UI for the [Local Dream](https://github.com/xororz/local-dream) Android app's HTTP API.
 
 ## Stack
 

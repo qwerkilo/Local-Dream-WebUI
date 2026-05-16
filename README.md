@@ -1,6 +1,6 @@
 # Local Dream WebUI
 
-A Flask web UI for the [Local Dream](https://github.com/lunar-byte-dev/localdream) Android app's local HTTP API.
+A Flask web UI for the [Local Dream](https://github.com/xororz/local-dream) Android app's local HTTP API.
 
 ## Features
 
@@ -17,7 +17,7 @@ A Flask web UI for the [Local Dream](https://github.com/lunar-byte-dev/localdrea
 
 ## Requirements
 
-- [Local Dream](https://github.com/lunar-byte-dev/localdream) installed and running on Android with a model loaded
+- [Local Dream](https://github.com/xororz/local-dream) installed and running on Android with a model loaded
 - Python 3.10+
 - Termux (or any Linux environment)
 
@@ -53,3 +53,7 @@ HF_TOKEN=hf_...
 ## Privacy
 
 No images are saved to disk or sent anywhere. All image data stays in your browser's session storage and is cleared when the tab closes.
+
+## Credits
+
+This project is a third-party web UI for [Local Dream](https://github.com/xororz/local-dream) by [xororz](https://github.com/xororz). It is not affiliated with or endorsed by the Local Dream project. See [NOTICE](NOTICE) for details.
