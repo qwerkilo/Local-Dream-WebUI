@@ -1,6 +1,7 @@
 import base64
 import io
 import json
+import os
 
 import requests
 from flask import Flask, Response, jsonify, render_template, request, stream_with_context
@@ -8,6 +9,15 @@ from PIL import Image
 
 app = Flask(__name__)
 LOCAL_DREAM_URL = "http://127.0.0.1:8081"
+
+# Load HF_TOKEN from .env if present (not committed)
+_env = os.path.join(os.path.dirname(__file__), ".env")
+if os.path.exists(_env):
+    with open(_env) as _f:
+        for _l in _f:
+            if "=" in _l and not _l.startswith("#"):
+                _k, _v = _l.strip().split("=", 1)
+                os.environ.setdefault(_k.strip(), _v.strip())
 
 
 def raw_rgb_to_png_b64(data):
@@ -30,6 +40,25 @@ def health():
         return jsonify({"ok": True})
     except Exception:
         return jsonify({"ok": False, "error": "Local Dream not reachable"}), 503
+
+
+@app.route("/automask", methods=["POST"])
+def automask():
+    body = request.json
+    token = body.get("token", "").strip() or os.environ.get("HF_TOKEN", "")
+    img_bytes = base64.b64decode(body.get("image", ""))
+    try:
+        resp = requests.post(
+            "https://router.huggingface.co/hf-inference/models/mattmdjaga/segformer_b2_clothes",
+            headers={"Authorization": f"Bearer {token}", "Content-Type": "image/png"},
+            data=img_bytes,
+            timeout=60,
+        )
+        if resp.status_code != 200:
+            return jsonify({"error": resp.text}), 502
+        return jsonify(resp.json())
+    except Exception as e:
+        return jsonify({"error": str(e)}), 502
 
 
 @app.route("/generate", methods=["POST"])

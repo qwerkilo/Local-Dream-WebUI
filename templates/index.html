@@ -43,8 +43,8 @@
   .edit-mask-btn { padding: 6px 14px; background: #2a1a4e; border: 1px solid #7c3aed;
                    border-radius: 6px; color: #a78bfa; font-size: 0.85rem; cursor: pointer; }
   .edit-mask-btn:hover { background: #3b1f6b; }
-  .mask-preview-thumb { width: 40px; height: 40px; border-radius: 4px; border: 1px solid #333;
-                         object-fit: cover; display: none; }
+  .mask-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+                  pointer-events: none; border-radius: 6px; display: none; }
 
   /* Generate button */
   .btn-row { display: flex; gap: 8px; margin-top: 8px; }
@@ -100,6 +100,14 @@
   .modal-canvas-wrap { flex: 1; overflow: hidden; display: flex; align-items: center;
                         justify-content: center; position: relative; }
   .modal-title { font-size: 0.9rem; font-weight: 600; color: #ccc; margin-right: 4px; }
+
+  /* Automask segment chips */
+  .seg-chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px;
+              border-radius: 20px; border: 2px solid #333; background: #1a1a1a;
+              color: #666; font-size: 0.78rem; cursor: pointer; white-space: nowrap;
+              transition: border-color 0.15s, color 0.15s; }
+  .seg-chip.selected { background: #222; }
+  .seg-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
 </style>
 </head>
 <body>
@@ -133,6 +141,7 @@
       </label>
       <div style="position:relative;display:inline-block;max-width:100%">
         <img id="imgPreview" class="img-preview hidden" alt="input">
+        <canvas id="maskOverlay" class="mask-overlay"></canvas>
         <button id="adjustCropBtn" class="hidden" style="position:absolute;bottom:8px;right:8px;
           padding:5px 10px;background:rgba(0,0,0,0.7);border:1px solid #555;border-radius:5px;
           color:#ccc;font-size:0.78rem;cursor:pointer">Adjust crop</button>
@@ -142,13 +151,17 @@
       <label>Denoise strength: <span id="denoiseVal">0.75</span></label>
       <input type="range" id="denoise" min="0" max="1" step="0.05" value="0.75">
     </div>
+    <div class="section" style="margin-bottom:6px">
+      <label>HF Token <span style="color:#555;font-size:0.75rem">— required for Automask</span></label>
+      <input type="password" id="hfToken" placeholder="hf_…" autocomplete="off">
+    </div>
     <div class="mask-toggle-row">
       <div class="check-row" style="margin:0">
-        <input type="checkbox" id="maskEnabled">
+        <input type="checkbox" id="maskEnabled" checked>
         <label for="maskEnabled" style="margin:0">Enable mask (inpaint)</label>
       </div>
+      <button class="edit-mask-btn hidden" id="automaskBtn">Automask</button>
       <button class="edit-mask-btn hidden" id="editMaskBtn">Edit Mask</button>
-      <canvas id="maskThumb" class="mask-preview-thumb"></canvas>
     </div>
   </div>
 
@@ -281,6 +294,26 @@
   </div>
 </div>
 
+<!-- AUTOMASK MODAL -->
+<div id="automaskModal" class="modal hidden">
+  <div class="modal-toolbar">
+    <span class="modal-title">Segments</span>
+    <span id="automaskSpinner" style="font-size:0.8rem;color:#888;display:none">Segmenting…</span>
+    <label style="display:flex;align-items:center;gap:6px;color:#aaa;font-size:0.82rem;margin:0;border:none">
+      Pad: <input type="range" id="automaskPad" min="0" max="40" value="0" style="width:70px;accent-color:#7c3aed">
+      <span id="automaskPadVal">0</span>px
+    </label>
+    <button id="automaskCancel" style="margin-left:auto">Cancel</button>
+    <button id="automaskApply" class="primary">Apply Mask</button>
+  </div>
+  <div class="modal-canvas-wrap">
+    <canvas id="automaskCanvas"></canvas>
+  </div>
+  <div id="automaskChips" style="padding:10px 12px;background:#1a1a1a;border-top:1px solid #2a2a2a;
+       display:flex;flex-wrap:wrap;gap:7px;overflow-y:auto;max-height:115px;flex-shrink:0;
+       -webkit-overflow-scrolling:touch"></div>
+</div>
+
 <script>
 const $ = id => document.getElementById(id);
 let mode = "txt2img";
@@ -293,9 +326,29 @@ let lastPayload = null;
 let cropImg = null, cropX = 0, cropY = 0, cropScale = 1;
 let cropDragging = false, cropDragStart = {x:0,y:0,cx:0,cy:0};
 let cropPinchDist = 0;
+let lastCropRegion = null;  // {cropX, cropY, cropScale, cropImgW, cropImgH} for inpaint compositing
 
 // mask state
 let maskCtx = null, maskHistory = [], maskDrawing = false, maskLastX = 0, maskLastY = 0;
+
+// automask state
+let automaskSegments = [];
+let automaskSelected = new Set();
+let automaskBaseImg = null;
+let automaskLastImgB64 = null;
+let automaskPadding = 0;
+const CLOTH_LABELS = new Set(['Upper-clothes','Skirt','Pants','Dress','Belt','Left-shoe','Right-shoe','Bag','Scarf','Hat']);
+const SEG_COLORS = {
+  'Hat':          [255,165,  0], 'Hair':         [139, 69, 19],
+  'Sunglasses':   [  0,210,210], 'Upper-clothes':[230, 50, 50],
+  'Skirt':        [190, 50,230], 'Pants':        [ 50, 90,230],
+  'Dress':        [230,100,190], 'Belt':         [210,180, 30],
+  'Left-shoe':    [ 60,200, 80], 'Right-shoe':   [ 40,160, 60],
+  'Face':         [255,210,160], 'Left-leg':     [170,170,170],
+  'Right-leg':    [140,140,140], 'Left-arm':     [210,185,165],
+  'Right-arm':    [190,165,145], 'Bag':          [170,130, 80],
+  'Scarf':        [255,100,100],
+};
 
 // ─── Mode switching ─────────────────────────────────────────────────────────
 document.querySelectorAll(".tab").forEach(btn =>
@@ -512,6 +565,7 @@ $("cropConfirm").addEventListener("click", () => {
   ictx.fillRect(0, 0, sz, sz);
   ictx.drawImage(cropImg, cropX, cropY, cropImg.width * cropScale, cropImg.height * cropScale);
   imgB64 = imgCanvas.toDataURL("image/png").split(",")[1];
+  lastCropRegion = { cropX, cropY, cropScale, cropImgW: cropImg.width, cropImgH: cropImg.height };
 
   // Export outpaint mask (white where empty, black where image covers)
   const maskCanvas = document.createElement("canvas");
@@ -544,6 +598,7 @@ $("cropConfirm").addEventListener("click", () => {
   $("imgPreview").classList.remove("hidden");
   $("adjustCropBtn").classList.remove("hidden");
   $("imgUploadLabel").textContent = "Tap to change image";
+  $("automaskBtn").classList.remove("hidden");
   $("editMaskBtn").classList.remove("hidden");
   saveSession();
   closeCropModal();
@@ -688,6 +743,8 @@ function saveSession() {
     else sessionStorage.removeItem("maskB64");
     sessionStorage.setItem("maskEnabled", $("maskEnabled").checked ? "1" : "0");
     if (rawUploadedImg) sessionStorage.setItem("rawImgSrc", rawUploadedImg.src);
+    if (lastCropRegion) sessionStorage.setItem("lastCropRegion", JSON.stringify(lastCropRegion));
+    else sessionStorage.removeItem("lastCropRegion");
   } catch(e) { /* storage full — skip */ }
 }
 
@@ -707,6 +764,7 @@ function restoreSession() {
   $("imgPreview").classList.remove("hidden");
   $("adjustCropBtn").classList.remove("hidden");
   $("imgUploadLabel").textContent = "Tap to change image";
+  $("automaskBtn").classList.remove("hidden");
   $("editMaskBtn").classList.remove("hidden");
 
   if (maskB64) {
@@ -714,6 +772,9 @@ function restoreSession() {
     $("maskEnabled").checked = enabled;
     updateMaskThumb();
   }
+
+  const stored = sessionStorage.getItem("lastCropRegion");
+  if (stored) try { lastCropRegion = JSON.parse(stored); } catch(e) {}
 
   // Restore original image for re-cropping
   const rawSrc = sessionStorage.getItem("rawImgSrc");
@@ -725,18 +786,24 @@ function restoreSession() {
 }
 
 function updateMaskThumb() {
-  const thumb = $("maskThumb");
-  if (maskB64) {
-    thumb.style.display = "block";
-    const sz = getTargetSize();
-    thumb.width = sz; thumb.height = sz;
-    const ctx = thumb.getContext("2d");
-    const img = new Image();
-    img.onload = () => ctx.drawImage(img, 0, 0, sz, sz);
-    img.src = "data:image/png;base64," + maskB64;
-  } else {
-    thumb.style.display = "none";
-  }
+  const overlay = $("maskOverlay");
+  if (!maskB64 || !imgB64) { overlay.style.display = "none"; return; }
+  const sz = getTargetSize();
+  overlay.width = sz; overlay.height = sz;
+  overlay.style.display = "block";
+  const ctx = overlay.getContext("2d");
+  const img = new Image();
+  img.onload = () => {
+    ctx.clearRect(0, 0, sz, sz);
+    ctx.drawImage(img, 0, 0, sz, sz);
+    const d = ctx.getImageData(0, 0, sz, sz);
+    for (let i = 0; i < d.data.length; i += 4) {
+      if (d.data[i] > 128) { d.data[i]=124; d.data[i+1]=58; d.data[i+2]=237; d.data[i+3]=150; }
+      else d.data[i+3] = 0;
+    }
+    ctx.putImageData(d, 0, 0);
+  };
+  img.src = "data:image/png;base64," + maskB64;
 }
 
 // ─── Auto-expand textareas ────────────────────────────────────────────────────
@@ -756,8 +823,8 @@ function buildPayload(omitImages = false) {
     size: sizeVal,
     steps: parseInt($("steps").value),
     cfg: parseFloat($("cfg").value),
-    seed: $("seedRandom").checked ? -1 : parseInt($("seed").value),
   };
+  if (!$("seedRandom").checked) p.seed = parseInt($("seed").value);
   const sched = $("scheduler").value;
   if (sched) p.scheduler = sched;
   if ($("karras").checked) p.karras = true;
@@ -832,11 +899,14 @@ function parseSSEChunk(chunk) {
   } else if (data.type === "complete") {
     $("progressFill").style.width = "100%";
     $("progressLabel").textContent = "Done!";
-    const src = "data:image/png;base64," + data.png_image;
-    $("outputImg").src = src;
-    $("dlBtn").href = src;
     renderDetails(data);
     $("outputPanel").style.display = "block";
+    const setOutput = src => { $("outputImg").src = src; $("dlBtn").href = src; };
+    if (lastPayload && lastPayload.mask && lastPayload.image) {
+      compositeInpaint(lastPayload.image, data.png_image, lastPayload.mask).then(setOutput);
+    } else {
+      setOutput("data:image/png;base64," + data.png_image);
+    }
   } else if (data.type === "error") {
     showError(data.error);
   }
@@ -864,6 +934,73 @@ function renderDetails(data) {
 }
 
 function finishGen() { $("genBtn").disabled = false; }
+
+async function compositeInpaint(origB64, genB64, maskB64) {
+  const load = b64 => new Promise(res => {
+    const img = new Image(); img.onload = () => res(img);
+    img.src = "data:image/png;base64," + b64;
+  });
+  const [origImg, genImg, maskImg] = await Promise.all([origB64, genB64, maskB64].map(load));
+
+  if (rawUploadedImg && lastCropRegion) {
+    const { cropX, cropY, cropScale } = lastCropRegion;
+    const ow = rawUploadedImg.naturalWidth, oh = rawUploadedImg.naturalHeight;
+    const sz = genImg.width;
+    // Where canvas (0,0) is in original-image coordinates
+    const srcX = -cropX / cropScale;
+    const srcY = -cropY / cropScale;
+    const srcW = sz / cropScale;
+    const srcH = sz / cropScale;
+
+    const off = document.createElement("canvas");
+    off.width = ow; off.height = oh;
+    const ctx = off.getContext("2d");
+
+    ctx.drawImage(rawUploadedImg, 0, 0);
+    const origData = ctx.getImageData(0, 0, ow, oh);
+
+    ctx.clearRect(0, 0, ow, oh);
+    ctx.drawImage(genImg, srcX, srcY, srcW, srcH);
+    const genData = ctx.getImageData(0, 0, ow, oh);
+
+    ctx.clearRect(0, 0, ow, oh);
+    ctx.drawImage(maskImg, srcX, srcY, srcW, srcH);
+    const maskData = ctx.getImageData(0, 0, ow, oh);
+
+    const out = ctx.createImageData(ow, oh);
+    for (let i = 0; i < out.data.length; i += 4) {
+      const m = maskData.data[i] / 255;
+      out.data[i]   = origData.data[i]   * (1 - m) + genData.data[i]   * m;
+      out.data[i+1] = origData.data[i+1] * (1 - m) + genData.data[i+1] * m;
+      out.data[i+2] = origData.data[i+2] * (1 - m) + genData.data[i+2] * m;
+      out.data[i+3] = 255;
+    }
+    ctx.putImageData(out, 0, 0);
+    return off.toDataURL("image/png");
+  }
+
+  // Fallback: composite at crop/generated size
+  const w = genImg.width, h = genImg.height;
+  const off = document.createElement("canvas");
+  off.width = w; off.height = h;
+  const ctx = off.getContext("2d");
+  ctx.drawImage(origImg, 0, 0, w, h);
+  const orig = ctx.getImageData(0, 0, w, h);
+  ctx.drawImage(genImg, 0, 0, w, h);
+  const gen = ctx.getImageData(0, 0, w, h);
+  ctx.drawImage(maskImg, 0, 0, w, h);
+  const mask = ctx.getImageData(0, 0, w, h);
+  const out = ctx.createImageData(w, h);
+  for (let i = 0; i < out.data.length; i += 4) {
+    const m = mask.data[i] / 255;
+    out.data[i]   = orig.data[i]   * (1 - m) + gen.data[i]   * m;
+    out.data[i+1] = orig.data[i+1] * (1 - m) + gen.data[i+1] * m;
+    out.data[i+2] = orig.data[i+2] * (1 - m) + gen.data[i+2] * m;
+    out.data[i+3] = 255;
+  }
+  ctx.putImageData(out, 0, 0);
+  return off.toDataURL("image/png");
+}
 function showError(msg) { $("errorMsg").textContent = msg; $("errorMsg").style.display = ""; }
 function hideError() { $("errorMsg").style.display = "none"; }
 
@@ -875,6 +1012,226 @@ $("debugBtn").addEventListener("click", () => {
   box.style.display = "block";
   $("debugBtn").textContent = "Hide JSON";
 });
+
+// ─── HF Token persistence ────────────────────────────────────────────────────
+$("hfToken").value = localStorage.getItem("hfToken") || "";
+$("hfToken").addEventListener("input", () => localStorage.setItem("hfToken", $("hfToken").value));
+
+// ─── AUTOMASK ────────────────────────────────────────────────────────────────
+function dilateSegMask(maskImg, padding, sz) {
+  const off = document.createElement("canvas");
+  off.width = sz; off.height = sz;
+  const ctx = off.getContext("2d");
+  ctx.drawImage(maskImg, 0, 0, sz, sz);
+  const raw = ctx.getImageData(0, 0, sz, sz);
+
+  // Binary source
+  const src = new Uint8Array(sz * sz);
+  for (let i = 0; i < sz * sz; i++) src[i] = raw.data[i * 4] > 128 ? 1 : 0;
+
+  if (padding === 0) {
+    const out = ctx.createImageData(sz, sz);
+    for (let i = 0; i < sz * sz; i++) {
+      const v = src[i] * 255;
+      out.data[i*4] = out.data[i*4+1] = out.data[i*4+2] = v;
+      out.data[i*4+3] = v;
+    }
+    ctx.putImageData(out, 0, 0);
+    return off;
+  }
+
+  // Horizontal pass (sliding window max)
+  const tmp = new Uint8Array(sz * sz);
+  for (let y = 0; y < sz; y++) {
+    const row = y * sz;
+    let count = 0;
+    for (let x = 0; x <= Math.min(padding, sz - 1); x++) count += src[row + x];
+    tmp[row] = count > 0 ? 1 : 0;
+    for (let x = 1; x < sz; x++) {
+      if (x + padding < sz) count += src[row + x + padding];
+      if (x - padding - 1 >= 0) count -= src[row + x - padding - 1];
+      tmp[row + x] = count > 0 ? 1 : 0;
+    }
+  }
+
+  // Vertical pass (sliding window max)
+  const dst = new Uint8Array(sz * sz);
+  for (let x = 0; x < sz; x++) {
+    let count = 0;
+    for (let y = 0; y <= Math.min(padding, sz - 1); y++) count += tmp[y * sz + x];
+    dst[x] = count > 0 ? 1 : 0;
+    for (let y = 1; y < sz; y++) {
+      if (y + padding < sz) count += tmp[(y + padding) * sz + x];
+      if (y - padding - 1 >= 0) count -= tmp[(y - padding - 1) * sz + x];
+      dst[y * sz + x] = count > 0 ? 1 : 0;
+    }
+  }
+
+  const out = ctx.createImageData(sz, sz);
+  for (let i = 0; i < sz * sz; i++) {
+    const v = dst[i] * 255;
+    out.data[i*4] = out.data[i*4+1] = out.data[i*4+2] = v;
+    out.data[i*4+3] = v;
+  }
+  ctx.putImageData(out, 0, 0);
+  return off;
+}
+
+function createColorCanvas(dilatedCanvas, color, sz) {
+  const off = document.createElement("canvas");
+  off.width = sz; off.height = sz;
+  const ctx = off.getContext("2d");
+  ctx.drawImage(dilatedCanvas, 0, 0, sz, sz);
+  const d = ctx.getImageData(0, 0, sz, sz);
+  const [r, g, b] = color;
+  for (let i = 0; i < d.data.length; i += 4) {
+    if (d.data[i+3] > 0) { d.data[i]=r; d.data[i+1]=g; d.data[i+2]=b; d.data[i+3]=175; }
+  }
+  ctx.putImageData(d, 0, 0);
+  return off;
+}
+
+function rebuildSegCanvases() {
+  const sz = getTargetSize();
+  for (const seg of automaskSegments) {
+    seg.dilated = dilateSegMask(seg.maskImg, automaskPadding, sz);
+    seg.colorCanvas = createColorCanvas(seg.dilated, seg.color, sz);
+  }
+}
+
+function drawAutomaskOverlay() {
+  const canvas = $("automaskCanvas");
+  const ctx = canvas.getContext("2d");
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  if (automaskBaseImg) ctx.drawImage(automaskBaseImg, 0, 0, canvas.width, canvas.height);
+  for (const seg of automaskSegments) {
+    if (!seg.colorCanvas) continue;
+    ctx.globalAlpha = automaskSelected.has(seg.label) ? 1.0 : 0.12;
+    ctx.drawImage(seg.colorCanvas, 0, 0, canvas.width, canvas.height);
+  }
+  ctx.globalAlpha = 1.0;
+}
+
+function renderAutomaskChips() {
+  const container = $("automaskChips");
+  container.innerHTML = "";
+  for (const seg of automaskSegments) {
+    const [r, g, b] = seg.color;
+    const selected = automaskSelected.has(seg.label);
+    const chip = document.createElement("button");
+    chip.className = "seg-chip" + (selected ? " selected" : "");
+    chip.style.borderColor = selected ? `rgb(${r},${g},${b})` : "#333";
+    chip.style.color = selected ? `rgb(${r},${g},${b})` : "#666";
+    chip.innerHTML = `<span class="seg-dot" style="background:rgb(${r},${g},${b})"></span>${seg.label}`;
+    chip.addEventListener("click", () => {
+      if (automaskSelected.has(seg.label)) automaskSelected.delete(seg.label);
+      else automaskSelected.add(seg.label);
+      drawAutomaskOverlay();
+      renderAutomaskChips();
+    });
+    container.appendChild(chip);
+  }
+}
+
+function openAutomaskModal() {
+  const canvas = $("automaskCanvas");
+  const sz = getTargetSize();
+  canvas.width = sz; canvas.height = sz;
+  const displaySize = Math.min(window.innerWidth, window.innerHeight - 180, 650);
+  canvas.style.width = displaySize + "px";
+  canvas.style.height = displaySize + "px";
+  $("automaskModal").classList.remove("hidden");
+  document.body.style.overflow = "hidden";
+}
+
+function closeAutomaskModal() {
+  $("automaskModal").classList.add("hidden");
+  document.body.style.overflow = "";
+}
+
+function applyAutomask() {
+  const sz = getTargetSize();
+  const off = document.createElement("canvas");
+  off.width = sz; off.height = sz;
+  const octx = off.getContext("2d");
+  octx.fillStyle = "black";
+  octx.fillRect(0, 0, sz, sz);
+  for (const seg of automaskSegments) {
+    if (!automaskSelected.has(seg.label) || !seg.dilated) continue;
+    octx.drawImage(seg.dilated, 0, 0);
+  }
+  maskB64 = off.toDataURL("image/png").split(",")[1];
+  $("maskEnabled").checked = true;
+  $("editMaskBtn").classList.remove("hidden");
+  updateMaskThumb();
+  saveSession();
+  closeAutomaskModal();
+}
+
+$("automaskPad").addEventListener("input", () => {
+  automaskPadding = parseInt($("automaskPad").value);
+  $("automaskPadVal").textContent = automaskPadding;
+  if (automaskSegments.length > 0) { rebuildSegCanvases(); drawAutomaskOverlay(); }
+});
+
+$("automaskBtn").addEventListener("click", async () => {
+  if (!imgB64) return;
+  // Cache: reuse last result for same image
+  if (imgB64 === automaskLastImgB64 && automaskSegments.length > 0) {
+    openAutomaskModal();
+    drawAutomaskOverlay();
+    renderAutomaskChips();
+    return;
+  }
+  const token = $("hfToken").value.trim();
+  const btn = $("automaskBtn");
+  btn.disabled = true;
+  btn.textContent = "Segmenting…";
+  hideError();
+  openAutomaskModal();
+  $("automaskSpinner").style.display = "";
+  $("automaskChips").innerHTML = "";
+  automaskBaseImg = new Image();
+  automaskBaseImg.onload = () => drawAutomaskOverlay();
+  automaskBaseImg.src = "data:image/png;base64," + imgB64;
+  try {
+    const res = await fetch("/automask", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ image: imgB64, token }),
+    });
+    const data = await res.json();
+    if (!res.ok) { showError("Automask failed: " + (data.error || res.status)); closeAutomaskModal(); return; }
+    const segments = data.filter(s => s.label !== "Background");
+    const sz = getTargetSize();
+    await Promise.all(segments.map(seg => new Promise(resolve => {
+      const img = new Image();
+      img.onload = () => {
+        seg.maskImg = img;
+        seg.color = SEG_COLORS[seg.label] || [0, 220, 0];
+        seg.dilated = dilateSegMask(img, automaskPadding, sz);
+        seg.colorCanvas = createColorCanvas(seg.dilated, seg.color, sz);
+        resolve();
+      };
+      img.src = "data:image/png;base64," + seg.mask;
+    })));
+    automaskSegments = segments;
+    automaskLastImgB64 = imgB64;
+    automaskSelected = new Set(segments.filter(s => CLOTH_LABELS.has(s.label)).map(s => s.label));
+    drawAutomaskOverlay();
+    renderAutomaskChips();
+  } catch(e) {
+    showError("Automask error: " + e.message);
+    closeAutomaskModal();
+  } finally {
+    $("automaskSpinner").style.display = "none";
+    btn.disabled = false;
+    btn.textContent = "Automask";
+  }
+});
+
+$("automaskCancel").addEventListener("click", closeAutomaskModal);
+$("automaskApply").addEventListener("click", applyAutomask);
 
 restoreSession();
 

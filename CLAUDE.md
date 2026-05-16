@@ -21,24 +21,28 @@ Local Dream must be open with a model loaded before the API is available at `htt
 ## Project Structure
 
 ```
-app.py                  # Flask server — proxy + raw RGB→PNG conversion
+app.py                  # Flask server — proxy + raw RGB→PNG conversion + automask proxy
 templates/index.html    # Entire frontend (single file)
-.shortcuts/Local Dream  # Termux widget shortcut to launch the server
+.env                    # Optional — set HF_TOKEN here (not committed)
+.shortcuts/Local Dream  # Termux widget shortcut — starts server and opens browser
 ```
 
 ## Architecture
 
 ### Backend (`app.py`)
 
-Three routes:
+Four routes:
 
 - `GET /` — serves the UI
 - `GET /health` — checks if Local Dream is reachable on port 8081
 - `POST /generate` — proxies the request to Local Dream, streams SSE back to browser
+- `POST /automask` — proxies image to HuggingFace segformer_b2_clothes, returns segment list
 
-The only server-side transformation: the Local Dream API returns raw RGB bytes (not PNG) in the `complete` event. Flask decodes these with Pillow and replaces `image` with `png_image` (base64 PNG) before forwarding to the browser.
+`HF_TOKEN` is read from `.env` at startup if present; the UI can also pass it per-request.
 
-Payload is passed through as-is. Only non-default optional params are sent (karras/use_opencl only if true, clip_skip only if >1) to stay close to what the native app sends.
+The only server-side transformation on `/generate`: the Local Dream API returns raw RGB bytes (not PNG) in the `complete` event. Flask decodes these with Pillow and replaces `image` with `png_image` (base64 PNG) before forwarding to the browser.
+
+Payload is passed through as-is. Only non-default optional params are sent (karras/use_opencl only if true, clip_skip only if >1, seed only if not random) to stay close to what the native app sends.
 
 ### Frontend (`templates/index.html`)
 
@@ -50,15 +54,29 @@ Single-page app, no framework. Key sections:
 1. User taps upload → file picker opens
 2. Image loads → **Crop/Position modal** opens automatically
 3. User drags/pinch-zooms image within the target canvas size
-4. On confirm: composited image exported as `imgB64`; any empty canvas areas auto-generate an outpaint mask
+4. On confirm: composited image exported as `imgB64`; crop parameters saved as `lastCropRegion`; any empty canvas areas auto-generate an outpaint mask
 5. "Adjust crop" button overlaid on preview lets user reopen the modal with state preserved
 
 **Mask editor** (inpaint):
 - Full-screen modal with drawing canvas overlaid on the image
 - White brush = area to repaint, black = keep
 - Undo/clear/invert controls, adjustable brush (4–300px, default 80)
+- Active mask shown as a purple tint canvas overlay on the image preview
 
-**Session persistence**: `imgB64`, `maskB64`, raw image src, and mask-enabled state are saved to `sessionStorage` after crop confirm and mask done. Restored on page reload (survives Flask restarts, cleared when tab closes).
+**Automask** (inpaint):
+- Sends `imgB64` to `/automask` → HuggingFace segformer_b2_clothes
+- Full-screen modal: image with colored segment overlays, chip buttons to select/deselect segments
+- Padding slider dilates segment masks (sliding-window max, horizontal + vertical passes)
+- Clothing segments pre-selected by default; apply writes combined mask to `maskB64`
+- Result cached per image — reopening skips the API call if image unchanged
+
+**Inpaint compositing** (`compositeInpaint`):
+- If `rawUploadedImg` and `lastCropRegion` are available, composites at the original image's resolution
+- Reverse-maps the 512px generated image back to original coordinates: `srcX = -cropX / cropScale`, `srcW = 512 / cropScale`
+- Draws generated and mask at those coordinates on an original-size canvas, then blends pixel-by-pixel
+- Falls back to crop-size compositing if original image or crop region is unavailable
+
+**Session persistence**: `imgB64`, `maskB64`, raw image src, `lastCropRegion`, and mask-enabled state are saved to `sessionStorage` after crop confirm and mask done. Restored on page reload (survives Flask restarts, cleared when tab closes).
 
 **SSE streaming**: Uses `fetch()` + `ReadableStream` reader. Chunks split on `\n\n`, events parsed manually. Progress bar driven by `step/total_steps` from API (display uses user-set steps to hide the API's 2 internal extra steps).
 

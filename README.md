@@ -7,10 +7,13 @@ A Flask web UI for the [Local Dream](https://github.com/lunar-byte-dev/localdrea
 - **txt2img** — generate images from a text prompt
 - **img2img** — generate from an input image + prompt
 - **Inpainting** — draw a mask over the input image to repaint specific areas
+- **Automask** — one-tap clothing/body segmentation via HuggingFace; select segments to build a mask automatically
+- **Full-res inpaint composite** — generated content is composited back onto the original image at its original resolution, not the 512px crop
 - **Crop/position modal** — drag and pinch-zoom your image to fit the generation canvas; empty areas are automatically outpainted
+- **Mask overlay** — active mask shown as a purple tint directly on the image preview
 - **Real-time progress** — SSE streaming shows step-by-step generation progress
 - **Details panel** — shows Steps, CFG, Size, Seed, Scheduler, and generation time after each run
-- **Session persistence** — uploaded image and mask survive page reloads (cleared when tab closes)
+- **Session persistence** — uploaded image, mask, and crop region survive page reloads (cleared when tab closes)
 
 ## Requirements
 
@@ -35,8 +38,17 @@ Local Dream must be running with a model loaded before you hit Generate — the 
 2. Enter a prompt (and optional negative prompt)
 3. For img2img: tap to upload an image → position it in the crop modal → confirm
 4. To inpaint: enable the **Mask** toggle → tap **Edit Mask** → draw over areas to repaint
-5. Adjust parameters (steps, CFG, seed, scheduler, etc.)
-6. Tap **Generate**
+5. To automask: tap **Automask** → enter your HuggingFace token → select segments → tap **Apply Mask**
+6. Adjust parameters (steps, CFG, seed, scheduler, etc.)
+7. Tap **Generate** — inpaint output is composited back onto your original image at full resolution
+
+### Automask
+
+Automask uses the [mattmdjaga/segformer_b2_clothes](https://huggingface.co/mattmdjaga/segformer_b2_clothes) model via the HuggingFace Inference API to segment clothing and body parts. A free HuggingFace account and API token are required. The token can be entered in the UI (persisted in `localStorage`) or set in a `.env` file:
+
+```
+HF_TOKEN=hf_...
+```
 
 ## Privacy
 
