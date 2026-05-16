@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Local Dream</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, sans-serif; background: #111; color: #eee; min-height: 100vh; }
+  .app { max-width: 800px; margin: 0 auto; padding: 16px; }
+  h1 { font-size: 1.4rem; font-weight: 600; margin-bottom: 16px; color: #a78bfa; }
+
+  .tabs { display: flex; gap: 4px; margin-bottom: 16px; }
+  .tab { padding: 8px 18px; border-radius: 6px; border: none; cursor: pointer;
+         background: #222; color: #aaa; font-size: 0.95rem; transition: background 0.15s; }
+  .tab.active { background: #7c3aed; color: #fff; }
+  .tab:hover:not(.active) { background: #333; }
+
+  .section { margin-bottom: 14px; }
+  label { display: block; font-size: 0.82rem; color: #aaa; margin-bottom: 4px; }
+  textarea, input[type=number], input[type=text], select {
+    width: 100%; padding: 8px 10px; background: #1e1e1e; border: 1px solid #333;
+    border-radius: 6px; color: #eee; font-size: 0.9rem;
+  }
+  textarea { resize: vertical; min-height: 72px; field-sizing: content; overflow-y: hidden; }
+  input[type=range] { width: 100%; accent-color: #7c3aed; }
+
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .check-row { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+  .check-row input[type=checkbox] { width: auto; accent-color: #7c3aed; flex-shrink: 0; }
+  .check-row label { margin: 0; font-size: 0.9rem; color: #ccc; }
+  .hidden { display: none !important; }
+
+  /* Upload */
+  .upload-label { display: block; border: 2px dashed #444; border-radius: 8px; padding: 14px;
+                  text-align: center; cursor: pointer; color: #777; font-size: 0.85rem; }
+  .upload-label:hover { border-color: #7c3aed; }
+  .upload-label input { display: none; }
+  .img-preview { max-width: 100%; border-radius: 6px; display: block; margin-top: 8px; }
+
+  /* Mask toggle row */
+  .mask-toggle-row { display: flex; align-items: center; gap: 10px; margin-top: 10px; margin-bottom: 18px; }
+  .edit-mask-btn { padding: 6px 14px; background: #2a1a4e; border: 1px solid #7c3aed;
+                   border-radius: 6px; color: #a78bfa; font-size: 0.85rem; cursor: pointer; }
+  .edit-mask-btn:hover { background: #3b1f6b; }
+  .mask-preview-thumb { width: 40px; height: 40px; border-radius: 4px; border: 1px solid #333;
+                         object-fit: cover; display: none; }
+
+  /* Generate button */
+  .btn-row { display: flex; gap: 8px; margin-top: 8px; }
+  .gen-btn { flex: 1; padding: 12px; background: #7c3aed; border: none; border-radius: 8px;
+             color: #fff; font-size: 1rem; font-weight: 600; cursor: pointer; }
+  .gen-btn:hover { background: #6d28d9; }
+  .gen-btn:disabled { background: #444; cursor: not-allowed; }
+  .debug-btn { padding: 12px 14px; background: #1e1e1e; border: 1px solid #333; border-radius: 8px;
+               color: #888; font-size: 0.85rem; cursor: pointer; white-space: nowrap; }
+  .debug-btn:hover { background: #2a2a2a; }
+  pre#debugBox { display: none; margin-top: 8px; padding: 10px; background: #111;
+    border: 1px solid #2a2a2a; border-radius: 6px; font-size: 0.75rem; color: #a3e635;
+    overflow-x: auto; white-space: pre-wrap; word-break: break-all; }
+
+  /* Progress */
+  #progressWrap { margin-top: 12px; display: none; }
+  #progressBar { height: 6px; background: #333; border-radius: 3px; overflow: hidden; }
+  #progressFill { height: 100%; background: #7c3aed; width: 0; transition: width 0.2s; }
+  #progressLabel { font-size: 0.8rem; color: #888; margin-top: 4px; }
+
+  /* Output */
+  #outputPanel { margin-top: 16px; display: none; }
+  #outputPanel img { max-width: 100%; border-radius: 8px; display: block; }
+  #detailsBox { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 8px;
+                padding: 12px 14px; margin-top: 10px; }
+  .details-title { font-size: 0.78rem; font-weight: 600; color: #888; text-transform: uppercase;
+                   letter-spacing: 0.05em; margin-bottom: 8px; }
+  .details-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px 16px; }
+  .detail-item { font-size: 0.82rem; }
+  .detail-label { color: #666; }
+  .detail-val { color: #ccc; margin-left: 4px; }
+  .dl-btn { display: inline-block; margin-top: 8px; padding: 7px 16px; background: #1e1e1e;
+            border: 1px solid #444; border-radius: 6px; color: #ccc; text-decoration: none;
+            font-size: 0.85rem; }
+  .dl-btn:hover { background: #2a2a2a; }
+
+  #statusBar { font-size: 0.8rem; padding: 6px 10px; border-radius: 6px; margin-bottom: 10px; display: none; }
+  .status-ok  { background: #14532d; color: #6ee7b7; }
+  .status-err { background: #450a0a; color: #fca5a5; }
+  #errorMsg { color: #f87171; font-size: 0.88rem; margin-top: 8px; display: none; }
+
+  /* === MODALS === */
+  .modal { position: fixed; inset: 0; z-index: 100; background: #000;
+           display: flex; flex-direction: column; touch-action: none; }
+  .modal.hidden { display: none !important; }
+  .modal-toolbar { display: flex; align-items: center; gap: 8px; padding: 10px 12px;
+                   background: #1a1a1a; border-bottom: 1px solid #2a2a2a; flex-shrink: 0;
+                   flex-wrap: wrap; }
+  .modal-toolbar button { padding: 6px 12px; border-radius: 6px; border: 1px solid #333;
+                           background: #222; color: #ccc; cursor: pointer; font-size: 0.82rem; }
+  .modal-toolbar button:hover { background: #333; }
+  .modal-toolbar button.primary { background: #7c3aed; border-color: #7c3aed; color: #fff; }
+  .modal-canvas-wrap { flex: 1; overflow: hidden; display: flex; align-items: center;
+                        justify-content: center; position: relative; }
+  .modal-title { font-size: 0.9rem; font-weight: 600; color: #ccc; margin-right: 4px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>Local Dream</h1>
+  <div id="statusBar"></div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab active" data-mode="txt2img">txt2img</button>
+    <button class="tab" data-mode="img2img">img2img</button>
+  </div>
+
+  <!-- Prompts -->
+  <div class="section">
+    <label>Prompt</label>
+    <textarea id="prompt">cute girl</textarea>
+  </div>
+  <div class="section">
+    <label>Negative prompt</label>
+    <textarea id="negPrompt">worst quality, low quality, normal quality, poorly drawn, lowres, low resolution, signature, watermarks, ugly, out of focus, error, blurry, unclear photo, bad photo, unrealistic, semi realistic, pixelated, cartoon, anime, cgi, drawing, 2d, 3d, censored, duplicate.</textarea>
+  </div>
+
+  <!-- img2img section -->
+  <div id="img2imgSection" class="hidden">
+    <div class="section">
+      <label>Input image</label>
+      <label class="upload-label" for="imgFile">
+        <input type="file" id="imgFile" accept="image/*">
+        <span id="imgUploadLabel">Tap to upload image</span>
+      </label>
+      <div style="position:relative;display:inline-block;max-width:100%">
+        <img id="imgPreview" class="img-preview hidden" alt="input">
+        <button id="adjustCropBtn" class="hidden" style="position:absolute;bottom:8px;right:8px;
+          padding:5px 10px;background:rgba(0,0,0,0.7);border:1px solid #555;border-radius:5px;
+          color:#ccc;font-size:0.78rem;cursor:pointer">Adjust crop</button>
+      </div>
+    </div>
+    <div class="section">
+      <label>Denoise strength: <span id="denoiseVal">0.75</span></label>
+      <input type="range" id="denoise" min="0" max="1" step="0.05" value="0.75">
+    </div>
+    <div class="mask-toggle-row">
+      <div class="check-row" style="margin:0">
+        <input type="checkbox" id="maskEnabled">
+        <label for="maskEnabled" style="margin:0">Enable mask (inpaint)</label>
+      </div>
+      <button class="edit-mask-btn hidden" id="editMaskBtn">Edit Mask</button>
+      <canvas id="maskThumb" class="mask-preview-thumb"></canvas>
+    </div>
+  </div>
+
+  <!-- Parameters -->
+  <div class="grid2">
+    <div class="section">
+      <label>Size</label>
+      <select id="size">
+        <option value="256">256</option>
+        <option value="384">384</option>
+        <option value="512" selected>512</option>
+        <option value="640">640</option>
+        <option value="768">768</option>
+        <option value="custom">Custom…</option>
+      </select>
+      <input type="number" id="sizeCustom" class="hidden" placeholder="e.g. 448" min="64" max="2048" step="8" style="margin-top:6px">
+    </div>
+    <div class="section">
+      <label>Scheduler</label>
+      <select id="scheduler">
+        <option value="">Default</option>
+        <option value="euler">Euler</option>
+        <option value="euler_a">Euler Ancestral</option>
+        <option value="lcm">LCM</option>
+        <option value="dpm++2m" selected>DPM++ 2M</option>
+        <option value="dpm++2m_sde">DPM++ 2M SDE</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="section">
+    <label>Steps: <span id="stepsVal">20</span></label>
+    <input type="range" id="steps" min="1" max="50" value="20">
+  </div>
+  <div class="section">
+    <label>CFG scale: <span id="cfgVal">7.0</span></label>
+    <input type="range" id="cfg" min="1" max="15" step="0.5" value="7.0">
+  </div>
+
+  <div class="section">
+    <label>Seed</label>
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="check-row" style="margin:0;flex-shrink:0">
+        <input type="checkbox" id="seedRandom" checked>
+        <label for="seedRandom" style="margin:0">Random</label>
+      </div>
+      <input type="number" id="seed" value="10" min="0" class="hidden" style="flex:1">
+    </div>
+  </div>
+  <div class="section">
+    <label>Clip skip</label>
+    <input type="number" id="clipSkip" value="1" min="1" max="4">
+  </div>
+
+  <div class="section">
+    <div class="check-row">
+      <input type="checkbox" id="karras">
+      <label for="karras">Karras sigmas</label>
+    </div>
+    <div class="check-row" style="margin-top:6px">
+      <input type="checkbox" id="useOpenCL">
+      <label for="useOpenCL">Use OpenCL (GPU, CPU mode only)</label>
+    </div>
+  </div>
+
+  <div class="btn-row">
+    <button class="gen-btn" id="genBtn">Generate</button>
+    <button class="debug-btn" id="debugBtn">Show JSON</button>
+  </div>
+  <pre id="debugBox"></pre>
+  <div id="errorMsg"></div>
+
+  <div id="progressWrap">
+    <div id="progressBar"><div id="progressFill"></div></div>
+    <div id="progressLabel">Starting…</div>
+  </div>
+
+  <div id="outputPanel">
+    <img id="outputImg" alt="output">
+    <div id="detailsBox">
+      <div class="details-title">Details</div>
+      <div id="detailsGrid" class="details-grid"></div>
+    </div>
+    <a class="dl-btn" id="dlBtn" download="dream.png">Download</a>
+  </div>
+</div>
+
+<!-- CROP MODAL -->
+<div id="cropModal" class="modal hidden">
+  <div class="modal-toolbar">
+    <span class="modal-title">Position Image</span>
+    <button id="cropFit">Fit</button>
+    <button id="cropFill">Fill</button>
+    <button id="cropCenter">Center</button>
+    <button id="cropZoomIn">＋</button>
+    <button id="cropZoomOut">－</button>
+    <button id="cropCancel" style="margin-left:auto">Cancel</button>
+    <button id="cropConfirm" class="primary">Confirm</button>
+  </div>
+  <div class="modal-canvas-wrap" id="cropCanvasWrap">
+    <canvas id="cropCanvas"></canvas>
+  </div>
+  <div style="padding:8px 12px;background:#1a1a1a;border-top:1px solid #2a2a2a;
+              font-size:0.75rem;color:#666;flex-shrink:0">
+    Drag to reposition · Pinch to zoom · Empty areas will be outpainted
+  </div>
+</div>
+
+<!-- MASK MODAL -->
+<div id="maskModal" class="modal hidden">
+  <div class="modal-toolbar">
+    <span class="modal-title">Draw Mask</span>
+    <button id="maskClear">Clear</button>
+    <button id="maskUndo">Undo</button>
+    <button id="maskInvert">Invert</button>
+    <label style="display:flex;align-items:center;gap:6px;color:#aaa;font-size:0.82rem;border:none;margin:0">
+      Brush: <input type="range" id="brushSize" min="4" max="300" value="80"
+                    style="width:90px;accent-color:#7c3aed">
+      <span id="brushVal">80</span>px
+    </label>
+    <button id="maskCancel" style="margin-left:auto">Cancel</button>
+    <button id="maskDone" class="primary">Done</button>
+  </div>
+  <div class="modal-canvas-wrap" id="maskCanvasWrap">
+    <canvas id="maskCanvas"></canvas>
+  </div>
+  <div style="padding:8px 12px;background:#1a1a1a;border-top:1px solid #2a2a2a;
+              font-size:0.75rem;color:#666;flex-shrink:0">
+    White = repaint · Black = keep · Draw with finger or stylus
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+let mode = "txt2img";
+let imgB64 = null;          // final composited image (after crop)
+let maskB64 = null;         // final mask PNG (after mask editor or from crop)
+let rawUploadedImg = null;  // original uploaded Image object
+let lastPayload = null;
+
+// crop state
+let cropImg = null, cropX = 0, cropY = 0, cropScale = 1;
+let cropDragging = false, cropDragStart = {x:0,y:0,cx:0,cy:0};
+let cropPinchDist = 0;
+
+// mask state
+let maskCtx = null, maskHistory = [], maskDrawing = false, maskLastX = 0, maskLastY = 0;
+
+// ─── Mode switching ─────────────────────────────────────────────────────────
+document.querySelectorAll(".tab").forEach(btn =>
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+    btn.classList.add("active");
+    mode = btn.dataset.mode;
+    $("img2imgSection").classList.toggle("hidden", mode === "txt2img");
+  })
+);
+
+// ─── Range displays ─────────────────────────────────────────────────────────
+[["steps","stepsVal"], ["cfg","cfgVal"], ["denoise","denoiseVal"], ["brushSize","brushVal"]]
+  .forEach(([id, valId]) => {
+    const el = $(id), vEl = $(valId);
+    if (!el || !vEl) return;
+    el.addEventListener("input", () => { vEl.textContent = el.value; });
+  });
+
+// ─── Size custom ─────────────────────────────────────────────────────────────
+$("size").addEventListener("change", () =>
+  $("sizeCustom").classList.toggle("hidden", $("size").value !== "custom")
+);
+
+// ─── Seed random toggle ──────────────────────────────────────────────────────
+$("seedRandom").addEventListener("change", () =>
+  $("seed").classList.toggle("hidden", $("seedRandom").checked)
+);
+
+// ─── Mask toggle ─────────────────────────────────────────────────────────────
+$("maskEnabled").addEventListener("change", () => {
+  const show = $("maskEnabled").checked && imgB64;
+  $("editMaskBtn").classList.toggle("hidden", !$("maskEnabled").checked);
+  if (!$("maskEnabled").checked) { maskB64 = null; updateMaskThumb(); }
+});
+
+// ─── Image upload → crop modal ───────────────────────────────────────────────
+$("imgFile").addEventListener("change", e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const img = new Image();
+    img.onload = () => {
+      rawUploadedImg = img;
+      openCropModal(img);
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+});
+
+// ─── CROP MODAL ──────────────────────────────────────────────────────────────
+function getTargetSize() {
+  const sel = $("size").value;
+  return sel === "custom" ? (parseInt($("sizeCustom").value) || 512) : parseInt(sel);
+}
+
+function openCropModal(img) {
+  cropImg = img;
+  const targetSize = getTargetSize();
+  const canvas = $("cropCanvas");
+  canvas.width = targetSize;
+  canvas.height = targetSize;
+
+  // Display size: fit in viewport
+  const displaySize = Math.min(window.innerWidth - 16, window.innerHeight - 160, 600);
+  canvas.style.width = displaySize + "px";
+  canvas.style.height = displaySize + "px";
+
+  // Initial: fit inside canvas
+  applyCropFit();
+  $("cropModal").classList.remove("hidden");
+  document.body.style.overflow = "hidden";
+  drawCrop();
+}
+
+function closeCropModal() {
+  $("cropModal").classList.add("hidden");
+  document.body.style.overflow = "";
+}
+
+function applyCropFit() {
+  const sz = getTargetSize();
+  cropScale = Math.min(sz / cropImg.width, sz / cropImg.height);
+  cropX = (sz - cropImg.width * cropScale) / 2;
+  cropY = (sz - cropImg.height * cropScale) / 2;
+}
+function applyCropFill() {
+  const sz = getTargetSize();
+  cropScale = Math.max(sz / cropImg.width, sz / cropImg.height);
+  cropX = (sz - cropImg.width * cropScale) / 2;
+  cropY = (sz - cropImg.height * cropScale) / 2;
+}
+function applyCropCenter() {
+  const sz = getTargetSize();
+  cropX = (sz - cropImg.width * cropScale) / 2;
+  cropY = (sz - cropImg.height * cropScale) / 2;
+}
+
+function drawCrop() {
+  const canvas = $("cropCanvas");
+  const ctx = canvas.getContext("2d");
+  const sz = canvas.width;
+  // Checkerboard background
+  const csz = 16;
+  for (let y = 0; y < sz; y += csz)
+    for (let x = 0; x < sz; x += csz) {
+      ctx.fillStyle = ((x + y) / csz) % 2 === 0 ? "#2a2a2a" : "#1e1e1e";
+      ctx.fillRect(x, y, csz, csz);
+    }
+  ctx.drawImage(cropImg, cropX, cropY, cropImg.width * cropScale, cropImg.height * cropScale);
+}
+
+// Crop touch/mouse events
+const cropWrap = $("cropCanvasWrap");
+cropWrap.addEventListener("mousedown", e => {
+  cropDragging = true;
+  cropDragStart = { x: e.clientX, y: e.clientY, cx: cropX, cy: cropY };
+});
+cropWrap.addEventListener("mousemove", e => {
+  if (!cropDragging) return;
+  const rect = $("cropCanvas").getBoundingClientRect();
+  const scale = $("cropCanvas").width / rect.width;
+  cropX = cropDragStart.cx + (e.clientX - cropDragStart.x) * scale;
+  cropY = cropDragStart.cy + (e.clientY - cropDragStart.y) * scale;
+  drawCrop();
+});
+cropWrap.addEventListener("mouseup", () => cropDragging = false);
+
+cropWrap.addEventListener("touchstart", e => {
+  e.preventDefault();
+  if (e.touches.length === 1) {
+    cropDragging = true;
+    cropDragStart = { x: e.touches[0].clientX, y: e.touches[0].clientY, cx: cropX, cy: cropY };
+  } else if (e.touches.length === 2) {
+    cropDragging = false;
+    cropPinchDist = Math.hypot(
+      e.touches[0].clientX - e.touches[1].clientX,
+      e.touches[0].clientY - e.touches[1].clientY
+    );
+  }
+}, { passive: false });
+
+cropWrap.addEventListener("touchmove", e => {
+  e.preventDefault();
+  if (e.touches.length === 1 && cropDragging) {
+    const rect = $("cropCanvas").getBoundingClientRect();
+    const scale = $("cropCanvas").width / rect.width;
+    cropX = cropDragStart.cx + (e.touches[0].clientX - cropDragStart.x) * scale;
+    cropY = cropDragStart.cy + (e.touches[0].clientY - cropDragStart.y) * scale;
+    drawCrop();
+  } else if (e.touches.length === 2) {
+    const dist = Math.hypot(
+      e.touches[0].clientX - e.touches[1].clientX,
+      e.touches[0].clientY - e.touches[1].clientY
+    );
+    const mid = {
+      x: (e.touches[0].clientX + e.touches[1].clientX) / 2,
+      y: (e.touches[0].clientY + e.touches[1].clientY) / 2
+    };
+    const rect = $("cropCanvas").getBoundingClientRect();
+    const s = $("cropCanvas").width / rect.width;
+    const cx = (mid.x - rect.left) * s;
+    const cy = (mid.y - rect.top) * s;
+    const factor = dist / cropPinchDist;
+    cropX = cx - (cx - cropX) * factor;
+    cropY = cy - (cy - cropY) * factor;
+    cropScale *= factor;
+    cropPinchDist = dist;
+    drawCrop();
+  }
+}, { passive: false });
+
+cropWrap.addEventListener("touchend", e => { if (e.touches.length === 0) cropDragging = false; });
+
+$("cropFit").addEventListener("click", () => { applyCropFit(); drawCrop(); });
+$("cropFill").addEventListener("click", () => { applyCropFill(); drawCrop(); });
+$("cropCenter").addEventListener("click", () => { applyCropCenter(); drawCrop(); });
+$("cropZoomIn").addEventListener("click", () => {
+  const sz = getTargetSize();
+  const cx = sz / 2, cy = sz / 2;
+  const f = 1.2;
+  cropX = cx - (cx - cropX) * f;
+  cropY = cy - (cy - cropY) * f;
+  cropScale *= f;
+  drawCrop();
+});
+$("cropZoomOut").addEventListener("click", () => {
+  const sz = getTargetSize();
+  const cx = sz / 2, cy = sz / 2;
+  const f = 1 / 1.2;
+  cropX = cx - (cx - cropX) * f;
+  cropY = cy - (cy - cropY) * f;
+  cropScale *= f;
+  drawCrop();
+});
+$("adjustCropBtn").addEventListener("click", () => {
+  if (cropImg) openCropModal(cropImg);
+});
+$("cropCancel").addEventListener("click", () => {
+  closeCropModal();
+  if (!imgB64) $("imgFile").value = "";
+});
+$("cropConfirm").addEventListener("click", () => {
+  const canvas = $("cropCanvas");
+  const sz = canvas.width;
+
+  // Export composited image (gray fill for empty areas)
+  const imgCanvas = document.createElement("canvas");
+  imgCanvas.width = sz; imgCanvas.height = sz;
+  const ictx = imgCanvas.getContext("2d");
+  ictx.fillStyle = "#808080";
+  ictx.fillRect(0, 0, sz, sz);
+  ictx.drawImage(cropImg, cropX, cropY, cropImg.width * cropScale, cropImg.height * cropScale);
+  imgB64 = imgCanvas.toDataURL("image/png").split(",")[1];
+
+  // Export outpaint mask (white where empty, black where image covers)
+  const maskCanvas = document.createElement("canvas");
+  maskCanvas.width = sz; maskCanvas.height = sz;
+  const mctx = maskCanvas.getContext("2d");
+  mctx.fillStyle = "white";
+  mctx.fillRect(0, 0, sz, sz);
+  mctx.fillStyle = "black";
+  const ix = Math.max(0, cropX), iy = Math.max(0, cropY);
+  const iw = Math.min(sz - ix, cropImg.width * cropScale - Math.max(0, -cropX));
+  const ih = Math.min(sz - iy, cropImg.height * cropScale - Math.max(0, -cropY));
+  if (iw > 0 && ih > 0) mctx.fillRect(ix, iy, iw, ih);
+
+  // Check if there are any empty areas (white pixels)
+  const mData = mctx.getImageData(0, 0, sz, sz).data;
+  const hasEmpty = Array.from({length: sz*sz}, (_,i) => mData[i*4]).some(v => v > 128);
+
+  if (hasEmpty && $("maskEnabled").checked) {
+    maskB64 = maskCanvas.toDataURL("image/png").split(",")[1];
+    updateMaskThumb();
+  } else if (!$("maskEnabled").checked && hasEmpty) {
+    // auto-enable mask for outpaint
+    $("maskEnabled").checked = true;
+    $("editMaskBtn").classList.remove("hidden");
+    maskB64 = maskCanvas.toDataURL("image/png").split(",")[1];
+    updateMaskThumb();
+  }
+
+  $("imgPreview").src = imgCanvas.toDataURL("image/png");
+  $("imgPreview").classList.remove("hidden");
+  $("adjustCropBtn").classList.remove("hidden");
+  $("imgUploadLabel").textContent = "Tap to change image";
+  $("editMaskBtn").classList.remove("hidden");
+  saveSession();
+  closeCropModal();
+});
+
+// ─── MASK MODAL ───────────────────────────────────────────────────────────────
+$("editMaskBtn").addEventListener("click", openMaskModal);
+
+function openMaskModal() {
+  if (!imgB64) return;
+  const canvas = $("maskCanvas");
+  const sz = getTargetSize();
+  canvas.width = sz;
+  canvas.height = sz;
+
+  const displaySize = Math.min(window.innerWidth - 0, window.innerHeight - 160, 700);
+  canvas.style.width = displaySize + "px";
+  canvas.style.height = displaySize + "px";
+
+  maskCtx = canvas.getContext("2d");
+
+  // Restore existing mask if any
+  if (maskB64) {
+    const img = new Image();
+    img.onload = () => maskCtx.drawImage(img, 0, 0, sz, sz);
+    img.src = "data:image/png;base64," + maskB64;
+  } else {
+    maskCtx.clearRect(0, 0, sz, sz);
+  }
+  maskHistory = [];
+
+  // Draw background image behind canvas
+  const bg = $("maskCanvas").parentElement;
+  bg.style.backgroundImage = `url(data:image/png;base64,${imgB64})`;
+  bg.style.backgroundSize = displaySize + "px " + displaySize + "px";
+  bg.style.backgroundRepeat = "no-repeat";
+  bg.style.backgroundPosition = "center";
+  bg.style.backgroundColor = "#000";
+
+  canvas.style.opacity = "0.7";
+
+  $("maskModal").classList.remove("hidden");
+  document.body.style.overflow = "hidden";
+}
+
+function closeMaskModal() {
+  $("maskModal").classList.add("hidden");
+  document.body.style.overflow = "";
+}
+
+function maskCanvasPos(e) {
+  const canvas = $("maskCanvas");
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  const src = e.touches ? e.touches[0] : e;
+  return [(src.clientX - rect.left) * scaleX, (src.clientY - rect.top) * scaleY];
+}
+
+function maskStartDraw(e) {
+  if (!maskCtx) return;
+  e.preventDefault();
+  maskDrawing = true;
+  [maskLastX, maskLastY] = maskCanvasPos(e);
+  maskHistory.push(maskCtx.getImageData(0, 0, $("maskCanvas").width, $("maskCanvas").height));
+}
+function maskDraw(e) {
+  if (!maskDrawing || !maskCtx) return;
+  e.preventDefault();
+  const [x, y] = maskCanvasPos(e);
+  const bs = parseInt($("brushSize").value);
+  maskCtx.globalCompositeOperation = "source-over";
+  maskCtx.strokeStyle = "rgba(255,255,255,0.95)";
+  maskCtx.lineWidth = bs;
+  maskCtx.lineCap = "round";
+  maskCtx.lineJoin = "round";
+  maskCtx.beginPath();
+  maskCtx.moveTo(maskLastX, maskLastY);
+  maskCtx.lineTo(x, y);
+  maskCtx.stroke();
+  [maskLastX, maskLastY] = [x, y];
+}
+function maskEndDraw() { maskDrawing = false; }
+
+const mc = $("maskCanvas");
+mc.addEventListener("mousedown", maskStartDraw);
+mc.addEventListener("mousemove", maskDraw);
+mc.addEventListener("mouseup", maskEndDraw);
+mc.addEventListener("mouseleave", maskEndDraw);
+mc.addEventListener("touchstart", maskStartDraw, { passive: false });
+mc.addEventListener("touchmove", maskDraw, { passive: false });
+mc.addEventListener("touchend", maskEndDraw);
+
+$("maskClear").addEventListener("click", () => {
+  if (!maskCtx) return;
+  maskHistory.push(maskCtx.getImageData(0, 0, $("maskCanvas").width, $("maskCanvas").height));
+  maskCtx.clearRect(0, 0, $("maskCanvas").width, $("maskCanvas").height);
+});
+$("maskUndo").addEventListener("click", () => {
+  if (!maskCtx || maskHistory.length === 0) return;
+  maskCtx.putImageData(maskHistory.pop(), 0, 0);
+});
+$("maskInvert").addEventListener("click", () => {
+  if (!maskCtx) return;
+  const c = $("maskCanvas");
+  maskHistory.push(maskCtx.getImageData(0, 0, c.width, c.height));
+  const d = maskCtx.getImageData(0, 0, c.width, c.height);
+  for (let i = 0; i < d.data.length; i += 4) {
+    const a = d.data[i+3];
+    d.data[i] = 255 - d.data[i];
+    d.data[i+1] = 255 - d.data[i+1];
+    d.data[i+2] = 255 - d.data[i+2];
+    d.data[i+3] = a === 0 ? 255 : 0;
+  }
+  maskCtx.putImageData(d, 0, 0);
+});
+$("maskCancel").addEventListener("click", closeMaskModal);
+$("maskDone").addEventListener("click", () => {
+  exportMask();
+  closeMaskModal();
+});
+
+function exportMask() {
+  const canvas = $("maskCanvas");
+  const sz = canvas.width;
+  const off = document.createElement("canvas");
+  off.width = sz; off.height = sz;
+  const octx = off.getContext("2d");
+  octx.fillStyle = "black";
+  octx.fillRect(0, 0, sz, sz);
+  octx.drawImage(canvas, 0, 0);
+  maskB64 = off.toDataURL("image/png").split(",")[1];
+  updateMaskThumb();
+  saveSession();
+}
+
+function saveSession() {
+  try {
+    if (imgB64) sessionStorage.setItem("imgB64", imgB64);
+    else sessionStorage.removeItem("imgB64");
+    if (maskB64) sessionStorage.setItem("maskB64", maskB64);
+    else sessionStorage.removeItem("maskB64");
+    sessionStorage.setItem("maskEnabled", $("maskEnabled").checked ? "1" : "0");
+    if (rawUploadedImg) sessionStorage.setItem("rawImgSrc", rawUploadedImg.src);
+  } catch(e) { /* storage full — skip */ }
+}
+
+function restoreSession() {
+  const storedImg = sessionStorage.getItem("imgB64");
+  if (!storedImg) return;
+  imgB64 = storedImg;
+  maskB64 = sessionStorage.getItem("maskB64") || null;
+
+  // Switch to img2img mode
+  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+  document.querySelector(".tab[data-mode='img2img']").classList.add("active");
+  mode = "img2img";
+  $("img2imgSection").classList.remove("hidden");
+
+  $("imgPreview").src = "data:image/png;base64," + imgB64;
+  $("imgPreview").classList.remove("hidden");
+  $("adjustCropBtn").classList.remove("hidden");
+  $("imgUploadLabel").textContent = "Tap to change image";
+  $("editMaskBtn").classList.remove("hidden");
+
+  if (maskB64) {
+    const enabled = sessionStorage.getItem("maskEnabled") === "1";
+    $("maskEnabled").checked = enabled;
+    updateMaskThumb();
+  }
+
+  // Restore original image for re-cropping
+  const rawSrc = sessionStorage.getItem("rawImgSrc");
+  if (rawSrc) {
+    const img = new Image();
+    img.onload = () => { rawUploadedImg = img; cropImg = img; };
+    img.src = rawSrc;
+  }
+}
+
+function updateMaskThumb() {
+  const thumb = $("maskThumb");
+  if (maskB64) {
+    thumb.style.display = "block";
+    const sz = getTargetSize();
+    thumb.width = sz; thumb.height = sz;
+    const ctx = thumb.getContext("2d");
+    const img = new Image();
+    img.onload = () => ctx.drawImage(img, 0, 0, sz, sz);
+    img.src = "data:image/png;base64," + maskB64;
+  } else {
+    thumb.style.display = "none";
+  }
+}
+
+// ─── Auto-expand textareas ────────────────────────────────────────────────────
+document.querySelectorAll("textarea").forEach(ta => {
+  const resize = () => { ta.style.height = "auto"; ta.style.height = ta.scrollHeight + "px"; };
+  ta.addEventListener("input", resize);
+  resize();
+});
+
+// ─── Build payload ────────────────────────────────────────────────────────────
+function buildPayload(omitImages = false) {
+  const sizeEl = $("size");
+  const sizeVal = sizeEl.value === "custom" ? parseInt($("sizeCustom").value) : parseInt(sizeEl.value);
+  const p = {
+    prompt: $("prompt").value.trim(),
+    negative_prompt: $("negPrompt").value,
+    size: sizeVal,
+    steps: parseInt($("steps").value),
+    cfg: parseFloat($("cfg").value),
+    seed: $("seedRandom").checked ? -1 : parseInt($("seed").value),
+  };
+  const sched = $("scheduler").value;
+  if (sched) p.scheduler = sched;
+  if ($("karras").checked) p.karras = true;
+  if ($("useOpenCL").checked) p.use_opencl = true;
+  const clipSkip = parseInt($("clipSkip").value);
+  if (clipSkip > 1) p.clip_skip = clipSkip;
+  if (mode === "img2img") {
+    p.image = omitImages ? "(base64 omitted)" : imgB64;
+    p.denoise_strength = parseFloat($("denoise").value);
+    if ($("maskEnabled").checked && maskB64) {
+      p.mask = omitImages ? "(base64 omitted)" : maskB64;
+    }
+  }
+  return p;
+}
+
+// ─── Generate ────────────────────────────────────────────────────────────────
+$("genBtn").addEventListener("click", generate);
+
+function generate() {
+  const prompt = $("prompt").value.trim();
+  if (!prompt) { showError("Please enter a prompt."); return; }
+  if (mode === "img2img" && !imgB64) { showError("Please upload an input image."); return; }
+
+  hideError();
+  const payload = buildPayload(false);
+  lastPayload = buildPayload(false); // keep for details panel
+
+  $("genBtn").disabled = true;
+  $("outputPanel").style.display = "none";
+  $("progressWrap").style.display = "block";
+  $("progressFill").style.width = "0%";
+  $("progressLabel").textContent = "Starting…";
+
+  fetch("/generate", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  }).then(res => {
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = "";
+    function read() {
+      reader.read().then(({ done, value }) => {
+        if (done) { finishGen(); return; }
+        buf += decoder.decode(value, { stream: true });
+        const parts = buf.split("\n\n");
+        buf = parts.pop();
+        for (const chunk of parts) parseSSEChunk(chunk);
+        read();
+      }).catch(err => { showError("Stream error: " + err); finishGen(); });
+    }
+    read();
+  }).catch(err => { showError("Fetch error: " + err); finishGen(); });
+}
+
+function parseSSEChunk(chunk) {
+  let eventType = null, dataStr = null;
+  for (const line of chunk.split("\n")) {
+    if (line.startsWith("event:")) eventType = line.slice(6).trim();
+    else if (line.startsWith("data:")) dataStr = line.slice(5).trim();
+  }
+  if (!dataStr || dataStr === "[DONE]") return;
+  let data;
+  try { data = JSON.parse(dataStr); } catch { return; }
+
+  if (data.type === "progress") {
+    const pct = data.total_steps > 0 ? Math.round((data.step / data.total_steps) * 100) : 0;
+    $("progressFill").style.width = pct + "%";
+    const displayTotal = lastPayload ? lastPayload.steps : data.total_steps;
+    $("progressLabel").textContent = `Step ${Math.min(data.step, displayTotal)} / ${displayTotal}`;
+  } else if (data.type === "complete") {
+    $("progressFill").style.width = "100%";
+    $("progressLabel").textContent = "Done!";
+    const src = "data:image/png;base64," + data.png_image;
+    $("outputImg").src = src;
+    $("dlBtn").href = src;
+    renderDetails(data);
+    $("outputPanel").style.display = "block";
+  } else if (data.type === "error") {
+    showError(data.error);
+  }
+}
+
+function renderDetails(data) {
+  const p = lastPayload || {};
+  const schedulerLabels = {
+    "euler":"Euler","euler_a":"Euler Ancestral","lcm":"LCM",
+    "dpm++2m":"DPM++ 2M","dpm++2m_sde":"DPM++ 2M SDE","":"Default"
+  };
+  const items = [
+    ["Steps", data.steps ?? p.steps],
+    ["CFG", data.cfg ?? p.cfg],
+    ["Size", `${data.width}×${data.height}`],
+    ["Seed", data.seed ?? p.seed],
+    ["Mode", mode],
+    ["Scheduler", schedulerLabels[data.scheduler ?? p.scheduler ?? ""] ?? (p.scheduler || "Default")],
+    ["Time", `${(data.generation_time_ms/1000).toFixed(1)}s`],
+    p.denoise_strength != null ? ["Denoise", p.denoise_strength] : null,
+  ].filter(Boolean);
+  $("detailsGrid").innerHTML = items.map(([k,v]) =>
+    `<div class="detail-item"><span class="detail-label">${k}:</span><span class="detail-val">${v}</span></div>`
+  ).join("");
+}
+
+function finishGen() { $("genBtn").disabled = false; }
+function showError(msg) { $("errorMsg").textContent = msg; $("errorMsg").style.display = ""; }
+function hideError() { $("errorMsg").style.display = "none"; }
+
+// ─── Debug JSON ───────────────────────────────────────────────────────────────
+$("debugBtn").addEventListener("click", () => {
+  const box = $("debugBox");
+  if (box.style.display !== "none") { box.style.display = "none"; $("debugBtn").textContent = "Show JSON"; return; }
+  box.textContent = JSON.stringify(buildPayload(true), null, 2);
+  box.style.display = "block";
+  $("debugBtn").textContent = "Hide JSON";
+});
+
+restoreSession();
+
+// ─── Health check ─────────────────────────────────────────────────────────────
+fetch("/health").then(r => r.json()).then(d => {
+  const bar = $("statusBar");
+  bar.style.display = "block";
+  if (d.ok) {
+    bar.className = "status-ok";
+    bar.textContent = "Local Dream is reachable.";
+    setTimeout(() => { bar.style.display = "none"; }, 3000);
+  } else {
+    bar.className = "status-err";
+    bar.textContent = "Local Dream not reachable — start the app and load a model first.";
+  }
+});
+</script>
+</body>
+</html>
