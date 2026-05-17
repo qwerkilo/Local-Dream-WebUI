@@ -12,6 +12,7 @@ A Flask web UI for the [Local Dream](https://github.com/xororz/local-dream) Andr
 - **Crop/position modal** — drag and pinch-zoom your image to fit the generation canvas; empty areas are automatically outpainted
 - **Mask overlay** — active mask shown as a purple tint directly on the image preview
 - **Real-time progress** — SSE streaming shows step-by-step generation progress
+- **Size options** — 512, 640, 768, 1024, or custom (up to 2048)
 - **Details panel** — shows Steps, CFG, Size, Seed, Scheduler, and generation time after each run
 - **Session persistence** — uploaded image, mask, and crop region survive page reloads (cleared when tab closes)
 

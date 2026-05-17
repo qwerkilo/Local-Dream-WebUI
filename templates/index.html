@@ -175,6 +175,7 @@
         <option value="512" selected>512</option>
         <option value="640">640</option>
         <option value="768">768</option>
+        <option value="1024">1024</option>
         <option value="custom">Custom…</option>
       </select>
       <input type="number" id="sizeCustom" class="hidden" placeholder="e.g. 448" min="64" max="2048" step="8" style="margin-top:6px">
@@ -182,11 +183,11 @@
     <div class="section">
       <label>Scheduler</label>
       <select id="scheduler">
-        <option value="">Default</option>
+        <option value="" selected>Default</option>
         <option value="euler">Euler</option>
         <option value="euler_a">Euler Ancestral</option>
         <option value="lcm">LCM</option>
-        <option value="dpm++2m" selected>DPM++ 2M</option>
+        <option value="dpm++2m">DPM++ 2M</option>
         <option value="dpm++2m_sde">DPM++ 2M SDE</option>
       </select>
     </div>
@@ -223,7 +224,7 @@
     </div>
     <div class="check-row" style="margin-top:6px">
       <input type="checkbox" id="useOpenCL">
-      <label for="useOpenCL">Use OpenCL (GPU, CPU mode only)</label>
+      <label for="useOpenCL">Use OpenCL (Enables GPU for CPU Models)</label>
     </div>
   </div>
 

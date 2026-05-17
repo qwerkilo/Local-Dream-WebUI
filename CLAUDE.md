@@ -50,6 +50,8 @@ Single-page app, no framework. Key sections:
 
 **Modes**: txt2img, img2img (with optional mask/inpaint toggle)
 
+**Size & scheduler**: Size options are 512 (default), 640, 768, 1024, and custom. Scheduler defaults to the API default (blank); other options: `euler`, `euler_a`, `lcm`, `dpm++2m`, `dpm++2m_sde`. OpenCL checkbox label: "Use OpenCL (Enables GPU for CPU Models)".
+
 **Image upload flow** (img2img):
 1. User taps upload → file picker opens
 2. Image loads → **Crop/Position modal** opens automatically
