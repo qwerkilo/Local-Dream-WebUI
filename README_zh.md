@@ -1,6 +1,6 @@
 # Local Dream WebUI
 
-[Local Dream](https://github.com/xororz/local-dream) Android 应用 HTTP API 的 Flask 网页界面。
+[Local Dream](https://github.com/xororz/local-dream) Android 应用 HTTP API 的 Flask 网页界面。 [English](README.md)
 
 ## 功能
 
@@ -15,8 +15,10 @@
 - **详情面板** — 显示步数、CFG、尺寸、种子、调度器和生成耗时
 - **会话持久化** — 上传的图像、蒙版和裁剪区域在页面刷新后保留（关闭标签页后清除）
 - **多语言** — 支持中文和英文界面，顶部导航栏一键切换
+- **参数预设** — 保存和加载提示词、负面提示词、尺寸、步数、调度器、CFG 和 Karras 设置
 - **可配置后端** — 设置自定义 Local Dream IP/端口，适用于不同设备
 - **实时连接检测** — URL 变更时自动执行健康检查，即时反馈后端状态
+- **主题切换** — 通过导航栏按钮在 Apple 浅色主题和原版暗色紫色主题之间切换
 - **Apple 风格设计** — 浅色羊皮纸背景、白色卡片、深色输出面板、胶囊按钮、蓝色强调色
 
 ## 环境要求
@@ -60,6 +62,12 @@ HF_TOKEN=hf_...
 ### 语言
 
 点击顶部导航栏的 **EN** / **中文** 切换界面语言。偏好设置保存在 `localStorage` 中。
+
+## 界面截图
+
+![Apple 主题 — 参数面板](./assets/image-20260527155403713.png)
+![原始主题 — 生成界面](./assets/image-20260527155418444.png)
+![裁剪模态框](./assets/image-20260527155438678.png)
 
 ## 隐私
 

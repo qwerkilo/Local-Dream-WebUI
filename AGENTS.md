@@ -36,3 +36,6 @@
 - Scheduler strings: `euler`, `euler_a`, `lcm`, `dpm++2m`, `dpm++2m_sde`. Unknown values silently fall back to default.
 - Only send non-default optional params (karras/use_opencl only if true, clip_skip only if >1, seed only if not random).
 - **`local_dream_url` field** in `/generate` body and `?url=` query param on `/health` allow overriding the default `127.0.0.1:8081`. Frontend persists the URL in `localStorage`.
+- **Health indicator** — green/red dot next to the URL input, refreshes every 10s via `checkHealth()` and on URL/toggle changes.
+- **Parameter presets** saved in `localStorage` (`presets` key) — prompt, neg_prompt, size, steps, scheduler, cfg, karras.
+- **Theme system** — `.theme-original` CSS class on `<body>` overrides all design tokens. Toggle button in sub-nav, preference in `localStorage` (`"theme"` key).

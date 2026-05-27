@@ -1,6 +1,6 @@
 # Local Dream WebUI
 
-A Flask web UI for the [Local Dream](https://github.com/xororz/local-dream) Android app's local HTTP API.
+A Flask web UI for the [Local Dream](https://github.com/xororz/local-dream) Android app's local HTTP API. [中文](README_zh.md)
 
 ## Features
 
@@ -15,8 +15,10 @@ A Flask web UI for the [Local Dream](https://github.com/xororz/local-dream) Andr
 - **Details panel** — shows Steps, CFG, Size, Seed, Scheduler, and generation time after each run
 - **Session persistence** — uploaded image, mask, and crop region survive page reloads (cleared when tab closes)
 - **Multi-language** — English and Chinese UI, toggle in the top nav bar
+- **Parameter presets** — save and load prompt, negative prompt, size, steps, scheduler, CFG, and Karras settings
 - **Configurable backend** — set a custom Local Dream IP/port when running on different machines
 - **Real-time connectivity** — health check auto-runs on URL changes; instant feedback on backend status
+- **Theme system** — switch between Apple-inspired light theme and original dark purple theme via the nav bar button
 - **Apple-inspired design** — light parchment canvas, white utility cards, dark output tile, pill buttons, Action Blue accent
 
 ## Requirements
@@ -60,6 +62,12 @@ HF_TOKEN=hf_...
 ### Language
 
 Click **EN** / **中文** in the top nav bar to switch between English and Chinese. Your preference is saved in `localStorage`.
+
+## Screenshots
+
+![Apple theme — parameters panel](./assets/image-20260527155403713.png)
+![Original theme — generation](./assets/image-20260527155418444.png)
+![Crop modal](./assets/image-20260527155438678.png)
 
 ## Privacy
 

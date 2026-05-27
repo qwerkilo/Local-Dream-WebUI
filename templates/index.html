@@ -18,6 +18,7 @@
     --parchment: #f5f5f7;
     --pearl: #fafafc;
     --tile-dark: #272729;
+    --tile-text: white;
     --black: #000000;
     --hairline: #e0e0e0;
     --divider-soft: #f0f0f0;
@@ -26,13 +27,75 @@
     --radius-md: 11px;
     --radius-lg: 18px;
     --radius-pill: 9999px;
+    --body-bg: var(--parchment);
+    --card-bg: var(--canvas);
+    --card-border: 1px solid var(--hairline);
+    --input-bg: var(--canvas);
+    --input-border: 1px solid var(--hairline);
+    --input-color: var(--ink);
+    --input-font-size: 17px;
+    --label-font-size: 14px;
+    --toggle-on: var(--blue);
+    --progress-track: var(--hairline);
+    --progress-fill: var(--blue);
+    --status-ok-bg: #e8f5e9;
+    --status-ok-color: #2e7d32;
+    --status-err-bg: #ffebee;
+    --status-err-color: #c62828;
+    --dot-ok: #34c759;
+    --dot-err: #ff3b30;
   }
-  body { font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif; background: var(--parchment); color: var(--ink); min-height: 100vh; -webkit-font-smoothing: antialiased; }
+  .theme-original {
+    --blue: #7c3aed;
+    --blue-focus: #8b5cf6;
+    --blue-on-dark: #a78bfa;
+    --ink: #eee;
+    --ink-muted-48: #888;
+    --ink-muted-80: #ccc;
+    --body-muted: #888;
+    --canvas: #1e1e1e;
+    --parchment: #111;
+    --pearl: #2a2a2a;
+    --tile-dark: #1a1a1a;
+    --tile-text: #ccc;
+    --black: #000;
+    --hairline: #333;
+    --divider-soft: #444;
+    --chip: #333;
+    --radius-sm: 6px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --radius-pill: 6px;
+    --body-bg: #111;
+    --card-bg: #1e1e1e;
+    --card-border: 1px solid #333;
+    --input-bg: #1e1e1e;
+    --input-border: 1px solid #333;
+    --input-color: #eee;
+    --input-font-size: 0.9rem;
+    --label-font-size: 0.82rem;
+    --toggle-on: var(--blue);
+    --progress-track: #333;
+    --progress-fill: var(--blue);
+    --status-ok-bg: #14532d;
+    --status-ok-color: #6ee7b7;
+    --status-err-bg: #450a0a;
+    --status-err-color: #fca5a5;
+    --dot-ok: #6ee7b7;
+    --dot-err: #fca5a5;
+  }
+  body { font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif; background: var(--body-bg); color: var(--ink); min-height: 100vh; -webkit-font-smoothing: antialiased; }
   .app { max-width: 800px; margin: 0 auto; padding: 0 16px 80px; }
   h1 { font-size: 34px; font-weight: 600; line-height: 1.47; letter-spacing: -0.374px; margin-bottom: 0; color: var(--ink); }
   .header-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; padding-top: 16px; }
 
   .ld-row { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; padding: 0 4px; }
+  .preset-row { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
+  .preset-row select { flex: 1; }
+  .preset-btn { padding: 8px 14px; background: var(--pearl); border: 3px solid var(--divider-soft);
+                border-radius: var(--radius-md); color: var(--ink-muted-80); font-size: 14px;
+                cursor: pointer; white-space: nowrap; }
+  .preset-btn:active { transform: scale(0.95); }
   .ld-label { font-size: 14px; color: var(--ink-muted-48); min-width: 56px; font-weight: 400; }
   .ld-input { flex: 1; }
   .toggle { position: relative; width: 42px; height: 24px; flex-shrink: 0; cursor: pointer; }
@@ -145,11 +208,11 @@
   .dl-btn:active { transform: scale(0.95); }
   .dl-btn:hover { opacity: 0.9; }
 
-  #statusBar { font-size: 14px; padding: 8px 16px; border-radius: var(--radius-sm);
-               margin-bottom: 16px; display: none; }
-  .status-ok  { background: #e8f5e9; color: #2e7d32; }
-  .status-err { background: #ffebee; color: #c62828; }
-  #errorMsg { color: #c62828; font-size: 14px; margin-top: 8px; display: none; }
+  .status-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .status-dot.ok { background: var(--dot-ok); }
+  .status-dot.err { background: var(--dot-err); }
+  .status-text { font-size: 12px; color: var(--ink-muted-48); }
+  #errorMsg { color: var(--status-err-color); font-size: 14px; margin-top: 8px; display: none; }
 
   /* === MODALS === */
   .modal { position: fixed; inset: 0; z-index: 100; background: var(--canvas);
@@ -190,14 +253,15 @@
     </label>
     <span class="ld-label" id="ldStatusLabel">Default</span>
     <input type="text" class="ld-input" id="ldUrl" data-i18n-placeholder="ld_url_placeholder" placeholder="http://127.0.0.1:8081" disabled>
+    <span class="status-dot" id="statusDot"></span>
+    <span class="status-text" id="statusText"></span>
   </div>
-
-  <div id="statusBar"></div>
 
   <div class="sub-nav">
     <button class="sub-nav-tab active" data-mode="txt2img" data-i18n="tab_txt2img">txt2img</button>
     <button class="sub-nav-tab" data-mode="img2img" data-i18n="tab_img2img">img2img</button>
     <span class="sub-nav-spacer"></span>
+    <button class="sub-nav-cta" id="themeToggle">🎨 Original</button>
     <button class="sub-nav-cta" id="langToggle">中文</button>
   </div>
 
@@ -250,7 +314,14 @@
   </div>
 
   <div class="card">
-    <div class="card-title" data-i18n="label_size">Settings</div>
+    <div class="card-title" data-i18n="preset_title">Settings</div>
+    <div class="preset-row">
+      <select id="presetSelect">
+        <option value="" data-i18n="preset_default">Default</option>
+      </select>
+      <button class="preset-btn" id="presetSave" data-i18n="preset_save">Save</button>
+      <button class="preset-btn" id="presetDelete" data-i18n="preset_delete">Delete</button>
+    </div>
   <div class="grid2">
     <div class="section">
       <label data-i18n="label_size">Size</label>
@@ -481,6 +552,12 @@ i18n.en = {
   ld_url_placeholder: "http://127.0.0.1:8081",
   ld_status_default: "Default",
   ld_status_custom: "Custom",
+  preset_title: "Settings",
+  preset_default: "Default",
+  preset_save: "Save",
+  preset_delete: "Delete",
+  preset_name_prompt: "Preset name",
+  preset_confirm_delete: "Delete this preset?",
 };
 
 i18n.zh = {
@@ -552,6 +629,12 @@ i18n.zh = {
   ld_url_placeholder: "http://127.0.0.1:8081",
   ld_status_default: "默认",
   ld_status_custom: "自定义",
+  preset_title: "预设",
+  preset_default: "默认",
+  preset_save: "保存",
+  preset_delete: "删除",
+  preset_name_prompt: "预设名称",
+  preset_confirm_delete: "删除此预设？",
 };
 
 let mode = "txt2img";
@@ -1267,28 +1350,21 @@ ldToggle.checked = localStorage.getItem("ldEnabled") === "1";
 ldUrl.disabled = !ldToggle.checked;
 document.getElementById("ldStatusLabel").textContent = ldToggle.checked ? t("ld_status_custom") : t("ld_status_default");
 
-function debounce(fn, ms) {
-  let timer;
-  return (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), ms); };
-}
-
-const checkHealth = debounce(() => {
+function checkHealth() {
   const url = ($("ldToggle").checked && $("ldUrl").value.trim())
     ? "/health?url=" + encodeURIComponent($("ldUrl").value.trim().startsWith("http") ? $("ldUrl").value.trim() : "http://" + $("ldUrl").value.trim())
     : "/health";
   fetch(url).then(r => r.json()).then(d => {
-    const bar = $("statusBar");
-    bar.style.display = "block";
-    if (d.ok) {
-      bar.className = "status-ok";
-      bar.textContent = t("status_reachable");
-      setTimeout(() => { bar.style.display = "none"; }, 3000);
-    } else {
-      bar.className = "status-err";
-      bar.textContent = t("status_unreachable");
-    }
+    const dot = $("statusDot");
+    const text = $("statusText");
+    dot.className = "status-dot " + (d.ok ? "ok" : "err");
+    text.textContent = d.ok ? t("status_reachable") : t("status_unreachable");
   });
-}, 500);
+}
+
+// Health check on load and every 10s
+checkHealth();
+setInterval(checkHealth, 10000);
 
 ldUrl.addEventListener("input", () => {
   localStorage.setItem("ldUrl", ldUrl.value);
@@ -1302,6 +1378,77 @@ ldToggle.addEventListener("change", () => {
   document.getElementById("ldStatusLabel").textContent = enabled ? t("ld_status_custom") : t("ld_status_default");
   localStorage.setItem("ldEnabled", enabled ? "1" : "0");
   checkHealth();
+});
+
+// ─── Presets ─────────────────────────────────────────────────────────────────
+const PRESET_KEYS = ["prompt","negPrompt","size","steps","scheduler","cfg","karras"];
+
+function loadPresets() {
+  const presets = JSON.parse(localStorage.getItem("presets") || "{}");
+  const sel = $("presetSelect");
+  sel.innerHTML = '<option value="" data-i18n="preset_default">Default</option>';
+  for (const name of Object.keys(presets).sort()) {
+    const opt = document.createElement("option");
+    opt.value = name; opt.textContent = name;
+    sel.appendChild(opt);
+  }
+  return presets;
+}
+
+function applyPreset(name, presets) {
+  const p = presets[name];
+  if (!p) return;
+  $("prompt").value = p.prompt || "";
+  $("negPrompt").value = p.neg_prompt || "";
+  $("size").value = p.size || "512";
+  $("size").dispatchEvent(new Event("change"));
+  $("steps").value = p.steps || 20;
+  $("stepsVal").textContent = $("steps").value;
+  $("cfg").value = p.cfg || 7;
+  $("cfgVal").textContent = $("cfg").value;
+  $("scheduler").value = p.scheduler || "";
+  $("karras").checked = !!p.karras;
+  // Auto-expand textarea
+  $("prompt").dispatchEvent(new Event("input"));
+  $("negPrompt").dispatchEvent(new Event("input"));
+}
+
+let presets = loadPresets();
+
+$("presetSelect").addEventListener("change", () => {
+  const name = $("presetSelect").value;
+  if (name) applyPreset(name, presets);
+});
+
+$("presetSave").addEventListener("click", () => {
+  const name = prompt(t("preset_name_prompt"));
+  if (!name) return;
+  presets[name] = {
+    prompt: $("prompt").value,
+    neg_prompt: $("negPrompt").value,
+    size: $("size").value,
+    steps: $("steps").value,
+    scheduler: $("scheduler").value,
+    cfg: $("cfg").value,
+    karras: $("karras").checked,
+  };
+  localStorage.setItem("presets", JSON.stringify(presets));
+  const sel = $("presetSelect");
+  const opt = document.createElement("option");
+  opt.value = name; opt.textContent = name;
+  sel.appendChild(opt);
+  sel.value = name;
+});
+
+$("presetDelete").addEventListener("click", () => {
+  const sel = $("presetSelect");
+  const name = sel.value;
+  if (!name || !confirm(t("preset_confirm_delete"))) return;
+  delete presets[name];
+  localStorage.setItem("presets", JSON.stringify(presets));
+  sel.value = "";
+  const opt = sel.querySelector(`option[value="${name.replace(/"/g,'\\"')}"]`);
+  if (opt) opt.remove();
 });
 
 function switchLanguage(lang) {
@@ -1550,11 +1697,21 @@ document.getElementById("langToggle").addEventListener("click", () => {
   switchLanguage(currLang === "zh" ? "en" : "zh");
 });
 
+// Theme toggle
+const themeToggle = document.getElementById("themeToggle");
+const savedTheme = localStorage.getItem("theme");
+if (savedTheme === "original") document.body.classList.add("theme-original");
+themeToggle.textContent = document.body.classList.contains("theme-original") ? "🎨 Apple" : "🎨 Original";
+themeToggle.addEventListener("click", () => {
+  document.body.classList.toggle("theme-original");
+  const isOrig = document.body.classList.contains("theme-original");
+  themeToggle.textContent = isOrig ? "🎨 Apple" : "🎨 Original";
+  localStorage.setItem("theme", isOrig ? "original" : "apple");
+});
+
 // Initialize language
 switchLanguage(currLang);
 
-// ─── Health check ─────────────────────────────────────────────────────────────
-checkHealth();
 </script>
 </body>
 </html>
