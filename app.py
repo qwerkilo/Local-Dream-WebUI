@@ -8,7 +8,7 @@ from flask import Flask, Response, jsonify, render_template, request, stream_wit
 from PIL import Image
 
 app = Flask(__name__)
-LOCAL_DREAM_URL = "http://127.0.0.1:8081"
+DEFAULT_LD_URL = "http://127.0.0.1:8081"
 
 # Load HF_TOKEN from .env if present (not committed)
 _env = os.path.join(os.path.dirname(__file__), ".env")
@@ -35,8 +35,9 @@ def index():
 
 @app.route("/health")
 def health():
+    url = request.args.get("url", "").strip() or DEFAULT_LD_URL
     try:
-        r = requests.get(f"{LOCAL_DREAM_URL}/", timeout=2)
+        r = requests.get(f"{url}/", timeout=2)
         return jsonify({"ok": True})
     except Exception:
         return jsonify({"ok": False, "error": "Local Dream not reachable"}), 503
@@ -66,9 +67,10 @@ def generate():
     payload = request.json
 
     def stream():
+        ld_url = payload.pop("local_dream_url", None) or DEFAULT_LD_URL
         try:
             with requests.post(
-                f"{LOCAL_DREAM_URL}/generate",
+                f"{ld_url}/generate",
                 json=payload,
                 stream=True,
                 timeout=300,

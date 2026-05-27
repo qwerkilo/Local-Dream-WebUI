@@ -6,135 +6,217 @@
 <title>Local Dream</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: system-ui, sans-serif; background: #111; color: #eee; min-height: 100vh; }
-  .app { max-width: 800px; margin: 0 auto; padding: 16px; }
-  h1 { font-size: 1.4rem; font-weight: 600; margin-bottom: 16px; color: #a78bfa; }
+  :root {
+    --blue: #0066cc;
+    --blue-focus: #0071e3;
+    --blue-on-dark: #2997ff;
+    --ink: #1d1d1f;
+    --ink-muted-48: #7a7a7a;
+    --ink-muted-80: #333333;
+    --body-muted: #cccccc;
+    --canvas: #ffffff;
+    --parchment: #f5f5f7;
+    --pearl: #fafafc;
+    --tile-dark: #272729;
+    --black: #000000;
+    --hairline: #e0e0e0;
+    --divider-soft: #f0f0f0;
+    --chip: #d2d2d7;
+    --radius-sm: 8px;
+    --radius-md: 11px;
+    --radius-lg: 18px;
+    --radius-pill: 9999px;
+  }
+  body { font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif; background: var(--parchment); color: var(--ink); min-height: 100vh; -webkit-font-smoothing: antialiased; }
+  .app { max-width: 800px; margin: 0 auto; padding: 0 16px 80px; }
+  h1 { font-size: 34px; font-weight: 600; line-height: 1.47; letter-spacing: -0.374px; margin-bottom: 0; color: var(--ink); }
+  .header-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; padding-top: 16px; }
 
-  .tabs { display: flex; gap: 4px; margin-bottom: 16px; }
-  .tab { padding: 8px 18px; border-radius: 6px; border: none; cursor: pointer;
-         background: #222; color: #aaa; font-size: 0.95rem; transition: background 0.15s; }
-  .tab.active { background: #7c3aed; color: #fff; }
-  .tab:hover:not(.active) { background: #333; }
+  .ld-row { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; padding: 0 4px; }
+  .ld-label { font-size: 14px; color: var(--ink-muted-48); min-width: 56px; font-weight: 400; }
+  .ld-input { flex: 1; }
+  .toggle { position: relative; width: 42px; height: 24px; flex-shrink: 0; cursor: pointer; }
+  .toggle input { display: none; }
+  .toggle-slider { position: absolute; inset: 0; background: var(--hairline); border-radius: 12px; transition: 0.2s; }
+  .toggle-slider::after { content: ''; position: absolute; top: 2px; left: 2px; width: 20px; height: 20px;
+    background: white; border-radius: 50%; transition: 0.2s; }
+  .toggle input:checked + .toggle-slider { background: var(--blue); }
+  .toggle input:checked + .toggle-slider::after { transform: translateX(18px); }
+
+  .sub-nav { display: flex; align-items: center; gap: 0; margin-bottom: 24px;
+             background: var(--parchment); backdrop-filter: blur(20px) saturate(180%);
+             height: 52px; border-radius: var(--radius-pill); padding: 0 6px; }
+  .sub-nav-tab { padding: 8px 22px; border-radius: var(--radius-pill); border: none; cursor: pointer;
+                 background: transparent; color: var(--ink-muted-48); font-size: 14px;
+                 font-weight: 400; transition: all 0.15s; white-space: nowrap; }
+  .sub-nav-tab.active { background: var(--blue); color: white; }
+  .sub-nav-tab:hover:not(.active) { background: rgba(0,0,0,0.04); }
+  .sub-nav-spacer { flex: 1; }
+  .sub-nav-cta { padding: 8px 22px; border-radius: var(--radius-pill); border: none; cursor: pointer;
+                 background: var(--blue); color: white; font-size: 14px; font-weight: 400; }
+
+  .card { background: var(--canvas); border: 1px solid var(--hairline); border-radius: var(--radius-lg);
+          padding: 24px; margin-bottom: 16px; }
+  .card-title { font-size: 14px; font-weight: 600; line-height: 1.29; letter-spacing: -0.224px;
+                color: var(--ink-muted-48); margin-bottom: 12px; text-transform: uppercase;
+                letter-spacing: 0.03em; }
 
   .section { margin-bottom: 14px; }
-  label { display: block; font-size: 0.82rem; color: #aaa; margin-bottom: 4px; }
+  label { display: block; font-size: 14px; font-weight: 600; line-height: 1.29;
+          letter-spacing: -0.224px; color: var(--ink-muted-48); margin-bottom: 6px; }
   textarea, input[type=number], input[type=text], select {
-    width: 100%; padding: 8px 10px; background: #1e1e1e; border: 1px solid #333;
-    border-radius: 6px; color: #eee; font-size: 0.9rem;
+    width: 100%; padding: 12px 20px; background: var(--canvas); border: 1px solid var(--hairline);
+    border-radius: var(--radius-pill); color: var(--ink); font-size: 17px; font-weight: 400;
+    line-height: 1.47; letter-spacing: -0.374px;
   }
-  textarea { resize: vertical; min-height: 72px; field-sizing: content; overflow-y: hidden; }
-  input[type=range] { width: 100%; accent-color: #7c3aed; }
+  textarea { resize: vertical; min-height: 72px; field-sizing: content; overflow-y: hidden;
+             border-radius: var(--radius-md); }
+  textarea:focus, input:focus, select:focus { outline: 2px solid var(--blue-focus); outline-offset: 0; }
+  input[type=range] { width: 100%; accent-color: var(--blue); height: 4px;
+                      -webkit-appearance: none; appearance: none; background: var(--hairline);
+                      border-radius: 2px; padding: 0; border: none; }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px;
+    border-radius: 50%; background: var(--blue); cursor: pointer; border: none; }
+  input[type=number] { -moz-appearance: textfield; }
+  input[type=number]::-webkit-inner-spin-button { display: none; }
+  select { -webkit-appearance: none; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%237a7a7a' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+           background-repeat: no-repeat; background-position: right 16px center; padding-right: 44px; }
 
-  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
   .check-row { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
-  .check-row input[type=checkbox] { width: auto; accent-color: #7c3aed; flex-shrink: 0; }
-  .check-row label { margin: 0; font-size: 0.9rem; color: #ccc; }
+  .check-row input[type=checkbox] { width: auto; accent-color: var(--blue); flex-shrink: 0; }
+  .check-row label { margin: 0; font-size: 14px; color: var(--ink); cursor: pointer; }
   .hidden { display: none !important; }
 
   /* Upload */
-  .upload-label { display: block; border: 2px dashed #444; border-radius: 8px; padding: 14px;
-                  text-align: center; cursor: pointer; color: #777; font-size: 0.85rem; }
-  .upload-label:hover { border-color: #7c3aed; }
+  .upload-label { display: block; border: 2px dashed var(--hairline); border-radius: var(--radius-md);
+                  padding: 20px; text-align: center; cursor: pointer; color: var(--ink-muted-48);
+                  font-size: 14px; }
+  .upload-label:hover { border-color: var(--blue); }
   .upload-label input { display: none; }
-  .img-preview { max-width: 100%; border-radius: 6px; display: block; margin-top: 8px; }
+  .img-preview { max-width: 100%; border-radius: var(--radius-sm); display: block; margin-top: 8px; }
 
   /* Mask toggle row */
-  .mask-toggle-row { display: flex; align-items: center; gap: 10px; margin-top: 10px; margin-bottom: 18px; }
-  .edit-mask-btn { padding: 6px 14px; background: #2a1a4e; border: 1px solid #7c3aed;
-                   border-radius: 6px; color: #a78bfa; font-size: 0.85rem; cursor: pointer; }
-  .edit-mask-btn:hover { background: #3b1f6b; }
+  .mask-toggle-row { display: flex; align-items: center; gap: 10px; margin-top: 16px; margin-bottom: 0; }
+  .edit-mask-btn { padding: 8px 14px; background: var(--pearl); border: 3px solid var(--divider-soft);
+                   border-radius: var(--radius-md); color: var(--ink-muted-80); font-size: 14px;
+                   cursor: pointer; }
+  .edit-mask-btn:active { transform: scale(0.95); }
   .mask-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%;
                   pointer-events: none; border-radius: 6px; display: none; }
 
   /* Generate button */
-  .btn-row { display: flex; gap: 8px; margin-top: 8px; }
-  .gen-btn { flex: 1; padding: 12px; background: #7c3aed; border: none; border-radius: 8px;
-             color: #fff; font-size: 1rem; font-weight: 600; cursor: pointer; }
-  .gen-btn:hover { background: #6d28d9; }
-  .gen-btn:disabled { background: #444; cursor: not-allowed; }
-  .debug-btn { padding: 12px 14px; background: #1e1e1e; border: 1px solid #333; border-radius: 8px;
-               color: #888; font-size: 0.85rem; cursor: pointer; white-space: nowrap; }
-  .debug-btn:hover { background: #2a2a2a; }
-  pre#debugBox { display: none; margin-top: 8px; padding: 10px; background: #111;
-    border: 1px solid #2a2a2a; border-radius: 6px; font-size: 0.75rem; color: #a3e635;
+  .btn-row { display: flex; gap: 8px; margin-top: 16px; }
+  .gen-btn { flex: 1; padding: 11px 22px; background: var(--blue); border: none;
+             border-radius: var(--radius-pill); color: white; font-size: 17px; font-weight: 400;
+             cursor: pointer; }
+  .gen-btn:active { transform: scale(0.95); }
+  .gen-btn:hover { opacity: 0.9; }
+  .gen-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+  .debug-btn { padding: 11px 22px; background: var(--pearl); border: 3px solid var(--divider-soft);
+               border-radius: var(--radius-md); color: var(--ink-muted-80); font-size: 14px;
+               cursor: pointer; white-space: nowrap; }
+  .debug-btn:active { transform: scale(0.95); }
+  pre#debugBox { display: none; margin-top: 8px; padding: 12px 16px; background: var(--parchment);
+    border: 1px solid var(--hairline); border-radius: var(--radius-md); font-size: 12px; color: var(--ink-muted-48);
     overflow-x: auto; white-space: pre-wrap; word-break: break-all; }
 
   /* Progress */
-  #progressWrap { margin-top: 12px; display: none; }
-  #progressBar { height: 6px; background: #333; border-radius: 3px; overflow: hidden; }
-  #progressFill { height: 100%; background: #7c3aed; width: 0; transition: width 0.2s; }
-  #progressLabel { font-size: 0.8rem; color: #888; margin-top: 4px; }
+  #progressBar { height: 4px; background: var(--hairline); border-radius: 2px; overflow: hidden; }
+  #progressFill { height: 100%; background: var(--blue); width: 0; transition: width 0.2s; }
+  #progressLabel { font-size: 14px; color: var(--ink-muted-48); margin-top: 8px; }
+  #progressWrap { margin-top: 16px; display: none; padding: 20px 0; }
 
-  /* Output */
-  #outputPanel { margin-top: 16px; display: none; }
-  #outputPanel img { max-width: 100%; border-radius: 8px; display: block; }
-  #detailsBox { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 8px;
-                padding: 12px 14px; margin-top: 10px; }
-  .details-title { font-size: 0.78rem; font-weight: 600; color: #888; text-transform: uppercase;
-                   letter-spacing: 0.05em; margin-bottom: 8px; }
+  .dark-tile { background: var(--tile-dark); color: white; border-radius: var(--radius-lg);
+               padding: 48px 32px; margin-top: 16px; display: none; }
+
+  #outputPanel { display: block; }
+  #outputPanel img { max-width: 100%; border-radius: var(--radius-sm); display: block; }
+  #detailsBox { margin-top: 16px; }
+  .details-title { font-size: 14px; font-weight: 600; line-height: 1.29; letter-spacing: -0.224px;
+                   color: var(--body-muted); margin-bottom: 8px; }
   .details-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px 16px; }
-  .detail-item { font-size: 0.82rem; }
-  .detail-label { color: #666; }
-  .detail-val { color: #ccc; margin-left: 4px; }
-  .dl-btn { display: inline-block; margin-top: 8px; padding: 7px 16px; background: #1e1e1e;
-            border: 1px solid #444; border-radius: 6px; color: #ccc; text-decoration: none;
-            font-size: 0.85rem; }
-  .dl-btn:hover { background: #2a2a2a; }
+  .detail-item { font-size: 17px; font-weight: 400; line-height: 1.47; letter-spacing: -0.374px; }
+  .detail-label { color: var(--body-muted); }
+  .detail-val { color: white; margin-left: 4px; }
+  .dl-btn { display: inline-block; margin-top: 12px; padding: 11px 22px; background: var(--blue);
+            border: none; border-radius: var(--radius-pill); color: white; text-decoration: none;
+            font-size: 17px; cursor: pointer; }
+  .dl-btn:active { transform: scale(0.95); }
+  .dl-btn:hover { opacity: 0.9; }
 
-  #statusBar { font-size: 0.8rem; padding: 6px 10px; border-radius: 6px; margin-bottom: 10px; display: none; }
-  .status-ok  { background: #14532d; color: #6ee7b7; }
-  .status-err { background: #450a0a; color: #fca5a5; }
-  #errorMsg { color: #f87171; font-size: 0.88rem; margin-top: 8px; display: none; }
+  #statusBar { font-size: 14px; padding: 8px 16px; border-radius: var(--radius-sm);
+               margin-bottom: 16px; display: none; }
+  .status-ok  { background: #e8f5e9; color: #2e7d32; }
+  .status-err { background: #ffebee; color: #c62828; }
+  #errorMsg { color: #c62828; font-size: 14px; margin-top: 8px; display: none; }
 
   /* === MODALS === */
-  .modal { position: fixed; inset: 0; z-index: 100; background: #000;
+  .modal { position: fixed; inset: 0; z-index: 100; background: var(--canvas);
            display: flex; flex-direction: column; touch-action: none; }
   .modal.hidden { display: none !important; }
-  .modal-toolbar { display: flex; align-items: center; gap: 8px; padding: 10px 12px;
-                   background: #1a1a1a; border-bottom: 1px solid #2a2a2a; flex-shrink: 0;
-                   flex-wrap: wrap; }
-  .modal-toolbar button { padding: 6px 12px; border-radius: 6px; border: 1px solid #333;
-                           background: #222; color: #ccc; cursor: pointer; font-size: 0.82rem; }
-  .modal-toolbar button:hover { background: #333; }
-  .modal-toolbar button.primary { background: #7c3aed; border-color: #7c3aed; color: #fff; }
+  .modal-toolbar { display: flex; align-items: center; gap: 8px; padding: 10px 16px;
+                   background: var(--parchment); border-bottom: 1px solid var(--hairline);
+                   flex-shrink: 0; flex-wrap: wrap; }
+  .modal-toolbar button { padding: 6px 14px; border-radius: var(--radius-sm); border: 3px solid var(--divider-soft);
+                          background: var(--pearl); color: var(--ink-muted-80); cursor: pointer;
+                          font-size: 14px; }
+  .modal-toolbar button:active { transform: scale(0.95); }
+  .modal-toolbar button.primary { background: var(--blue); border-color: var(--blue); color: white; }
   .modal-canvas-wrap { flex: 1; overflow: hidden; display: flex; align-items: center;
                         justify-content: center; position: relative; }
-  .modal-title { font-size: 0.9rem; font-weight: 600; color: #ccc; margin-right: 4px; }
+  .modal-title { font-size: 14px; font-weight: 600; color: var(--ink-muted-48); margin-right: 8px; }
 
   /* Automask segment chips */
-  .seg-chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px;
-              border-radius: 20px; border: 2px solid #333; background: #1a1a1a;
-              color: #666; font-size: 0.78rem; cursor: pointer; white-space: nowrap;
-              transition: border-color 0.15s, color 0.15s; }
-  .seg-chip.selected { background: #222; }
+  .seg-chip { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px;
+              border-radius: var(--radius-pill); border: 2px solid var(--hairline);
+              background: var(--canvas); color: var(--ink-muted-48); font-size: 14px;
+              cursor: pointer; white-space: nowrap; }
+  .seg-chip.selected { border-color: var(--blue); color: var(--blue); }
+  .seg-chip:active { transform: scale(0.95); }
   .seg-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
 </style>
 </head>
 <body>
 <div class="app">
-  <h1>Local Dream</h1>
+  <div class="header-row">
+    <h1>Local Dream</h1>
+  </div>
+
+  <div class="ld-row">
+    <label class="toggle">
+      <input type="checkbox" id="ldToggle">
+      <span class="toggle-slider"></span>
+    </label>
+    <span class="ld-label" id="ldStatusLabel">Default</span>
+    <input type="text" class="ld-input" id="ldUrl" data-i18n-placeholder="ld_url_placeholder" placeholder="http://127.0.0.1:8081" disabled>
+  </div>
+
   <div id="statusBar"></div>
 
-  <!-- Tabs -->
-  <div class="tabs">
-    <button class="tab active" data-mode="txt2img">txt2img</button>
-    <button class="tab" data-mode="img2img">img2img</button>
+  <div class="sub-nav">
+    <button class="sub-nav-tab active" data-mode="txt2img" data-i18n="tab_txt2img">txt2img</button>
+    <button class="sub-nav-tab" data-mode="img2img" data-i18n="tab_img2img">img2img</button>
+    <span class="sub-nav-spacer"></span>
+    <button class="sub-nav-cta" id="langToggle">中文</button>
   </div>
 
-  <!-- Prompts -->
-  <div class="section">
-    <label>Prompt</label>
-    <textarea id="prompt">cute girl</textarea>
-  </div>
-  <div class="section">
-    <label>Negative prompt</label>
-    <textarea id="negPrompt">worst quality, low quality, normal quality, poorly drawn, lowres, low resolution, signature, watermarks, ugly, out of focus, error, blurry, unclear photo, bad photo, unrealistic, semi realistic, pixelated, cartoon, anime, cgi, drawing, 2d, 3d, censored, duplicate.</textarea>
-  </div>
-
-  <!-- img2img section -->
-  <div id="img2imgSection" class="hidden">
+  <div class="card">
+    <div class="card-title" data-i18n="label_prompt">Prompt</div>
     <div class="section">
-      <label>Input image</label>
+      <textarea id="prompt">cute girl</textarea>
+    </div>
+    <div class="section" style="margin-bottom:0">
+      <label data-i18n="label_neg_prompt">Negative prompt</label>
+      <textarea id="negPrompt">worst quality, low quality, normal quality, poorly drawn, lowres, low resolution, signature, watermarks, ugly, out of focus, error, blurry, unclear photo, bad photo, unrealistic, semi realistic, pixelated, cartoon, anime, cgi, drawing, 2d, 3d, censored, duplicate.</textarea>
+    </div>
+  </div>
+
+  <div id="img2imgSection" class="hidden" style="margin-top:16px">
+  <div class="card">
+    <div class="card-title" data-i18n="label_input_image">Image</div>
+    <div class="section">
+      <label data-i18n="label_input_image">Input image</label>
       <label class="upload-label" for="imgFile">
         <input type="file" id="imgFile" accept="image/*">
         <span id="imgUploadLabel">Tap to upload image</span>
@@ -143,32 +225,35 @@
         <img id="imgPreview" class="img-preview hidden" alt="input">
         <canvas id="maskOverlay" class="mask-overlay"></canvas>
         <button id="adjustCropBtn" class="hidden" style="position:absolute;bottom:8px;right:8px;
-          padding:5px 10px;background:rgba(0,0,0,0.7);border:1px solid #555;border-radius:5px;
-          color:#ccc;font-size:0.78rem;cursor:pointer">Adjust crop</button>
+          padding:8px 14px;background:var(--pearl);border:3px solid var(--divider-soft);
+          border-radius:var(--radius-md);color:var(--ink-muted-80);font-size:14px;cursor:pointer"
+          data-i18n="adjust_crop">Adjust crop</button>
       </div>
     </div>
     <div class="section">
-      <label>Denoise strength: <span id="denoiseVal">0.75</span></label>
+      <label><span data-i18n="label_denoise">Denoise strength:</span> <span id="denoiseVal">0.75</span></label>
       <input type="range" id="denoise" min="0" max="1" step="0.05" value="0.75">
     </div>
     <div class="section" style="margin-bottom:6px">
-      <label>HF Token <span style="color:#555;font-size:0.75rem">— required for Automask</span></label>
-      <input type="password" id="hfToken" placeholder="hf_…" autocomplete="off">
+      <label><span data-i18n="label_hf_token">HF Token</span> <span style="color:var(--ink-muted-48);font-size:0.75rem" data-i18n="label_hf_token_hint">— required for Automask</span></label>
+      <input type="password" id="hfToken" data-i18n-placeholder="hf_token_placeholder" placeholder="hf_…" autocomplete="off">
     </div>
     <div class="mask-toggle-row">
       <div class="check-row" style="margin:0">
         <input type="checkbox" id="maskEnabled" checked>
-        <label for="maskEnabled" style="margin:0">Enable mask (inpaint)</label>
+        <label for="maskEnabled" style="margin:0" data-i18n="mask_enable">Enable mask (inpaint)</label>
       </div>
-      <button class="edit-mask-btn hidden" id="automaskBtn">Automask</button>
-      <button class="edit-mask-btn hidden" id="editMaskBtn">Edit Mask</button>
+      <button class="edit-mask-btn hidden" id="automaskBtn" data-i18n="automask">Automask</button>
+      <button class="edit-mask-btn hidden" id="editMaskBtn" data-i18n="mask_edit">Edit Mask</button>
     </div>
   </div>
+  </div>
 
-  <!-- Parameters -->
+  <div class="card">
+    <div class="card-title" data-i18n="label_size">Settings</div>
   <div class="grid2">
     <div class="section">
-      <label>Size</label>
+      <label data-i18n="label_size">Size</label>
       <select id="size">
         <option value="256">256</option>
         <option value="384">384</option>
@@ -178,12 +263,12 @@
         <option value="1024">1024</option>
         <option value="custom">Custom…</option>
       </select>
-      <input type="number" id="sizeCustom" class="hidden" placeholder="e.g. 448" min="64" max="2048" step="8" style="margin-top:6px">
+      <input type="number" id="sizeCustom" class="hidden" data-i18n-placeholder="custom_size_placeholder" placeholder="e.g. 448" min="64" max="2048" step="8" style="margin-top:6px">
     </div>
     <div class="section">
-      <label>Scheduler</label>
+      <label data-i18n="label_scheduler">Scheduler</label>
       <select id="scheduler">
-        <option value="" selected>Default</option>
+        <option value="" selected data-i18n="scheduler_default">Default</option>
         <option value="euler">Euler</option>
         <option value="euler_a">Euler Ancestral</option>
         <option value="lcm">LCM</option>
@@ -194,129 +279,281 @@
   </div>
 
   <div class="section">
-    <label>Steps: <span id="stepsVal">20</span></label>
+      <label><span data-i18n="label_steps">Steps:</span> <span id="stepsVal">20</span></label>
     <input type="range" id="steps" min="1" max="50" value="20">
   </div>
   <div class="section">
-    <label>CFG scale: <span id="cfgVal">7.0</span></label>
+      <label><span data-i18n="label_cfg">CFG scale:</span> <span id="cfgVal">7.0</span></label>
     <input type="range" id="cfg" min="1" max="15" step="0.5" value="7.0">
   </div>
 
   <div class="section">
-    <label>Seed</label>
+      <label data-i18n="label_seed">Seed</label>
     <div style="display:flex;align-items:center;gap:10px">
       <div class="check-row" style="margin:0;flex-shrink:0">
         <input type="checkbox" id="seedRandom" checked>
-        <label for="seedRandom" style="margin:0">Random</label>
+        <label for="seedRandom" style="margin:0" data-i18n="seed_random">Random</label>
       </div>
       <input type="number" id="seed" value="10" min="0" class="hidden" style="flex:1">
     </div>
   </div>
   <div class="section">
-    <label>Clip skip</label>
+      <label data-i18n="label_clip_skip">Clip skip</label>
     <input type="number" id="clipSkip" value="1" min="1" max="4">
   </div>
 
   <div class="section">
     <div class="check-row">
       <input type="checkbox" id="karras">
-      <label for="karras">Karras sigmas</label>
+      <label for="karras" data-i18n="karras">Karras sigmas</label>
     </div>
     <div class="check-row" style="margin-top:6px">
       <input type="checkbox" id="useOpenCL">
-      <label for="useOpenCL">Use OpenCL (Enables GPU for CPU Models)</label>
+      <label for="useOpenCL" data-i18n="use_opencl">Use OpenCL (Enables GPU for CPU Models)</label>
     </div>
   </div>
 
   <div class="btn-row">
-    <button class="gen-btn" id="genBtn">Generate</button>
+    <button class="gen-btn" id="genBtn" data-i18n="generate">Generate</button>
     <button class="debug-btn" id="debugBtn">Show JSON</button>
   </div>
   <pre id="debugBox"></pre>
   <div id="errorMsg"></div>
+  </div>
 
   <div id="progressWrap">
     <div id="progressBar"><div id="progressFill"></div></div>
     <div id="progressLabel">Starting…</div>
   </div>
 
+  <div class="dark-tile" id="outputTile">
   <div id="outputPanel">
     <img id="outputImg" alt="output">
     <div id="detailsBox">
-      <div class="details-title">Details</div>
+      <div class="details-title" data-i18n="details_title">Details</div>
       <div id="detailsGrid" class="details-grid"></div>
     </div>
-    <a class="dl-btn" id="dlBtn" download="dream.png">Download</a>
+    <a class="dl-btn" id="dlBtn" download="dream.png" data-i18n="download">Download</a>
+  </div>
   </div>
 </div>
 
 <!-- CROP MODAL -->
 <div id="cropModal" class="modal hidden">
   <div class="modal-toolbar">
-    <span class="modal-title">Position Image</span>
-    <button id="cropFit">Fit</button>
-    <button id="cropFill">Fill</button>
-    <button id="cropCenter">Center</button>
+    <span class="modal-title" data-i18n="crop_title">Position Image</span>
+    <button id="cropFit" data-i18n="crop_fit">Fit</button>
+    <button id="cropFill" data-i18n="crop_fill">Fill</button>
+    <button id="cropCenter" data-i18n="crop_center">Center</button>
     <button id="cropZoomIn">＋</button>
     <button id="cropZoomOut">－</button>
-    <button id="cropCancel" style="margin-left:auto">Cancel</button>
-    <button id="cropConfirm" class="primary">Confirm</button>
+    <button id="cropCancel" style="margin-left:auto" data-i18n="crop_cancel">Cancel</button>
+    <button id="cropConfirm" class="primary" data-i18n="crop_confirm">Confirm</button>
   </div>
   <div class="modal-canvas-wrap" id="cropCanvasWrap">
     <canvas id="cropCanvas"></canvas>
   </div>
-  <div style="padding:8px 12px;background:#1a1a1a;border-top:1px solid #2a2a2a;
-              font-size:0.75rem;color:#666;flex-shrink:0">
-    Drag to reposition · Pinch to zoom · Empty areas will be outpainted
+  <div style="padding:8px 16px;background:var(--parchment);border-top:1px solid var(--hairline);
+              font-size:12px;color:var(--ink-muted-48);flex-shrink:0">
+    <span data-i18n="crop_hint">Drag to reposition · Pinch to zoom · Empty areas will be outpainted</span>
   </div>
 </div>
 
 <!-- MASK MODAL -->
 <div id="maskModal" class="modal hidden">
   <div class="modal-toolbar">
-    <span class="modal-title">Draw Mask</span>
-    <button id="maskClear">Clear</button>
-    <button id="maskUndo">Undo</button>
-    <button id="maskInvert">Invert</button>
-    <label style="display:flex;align-items:center;gap:6px;color:#aaa;font-size:0.82rem;border:none;margin:0">
-      Brush: <input type="range" id="brushSize" min="4" max="300" value="80"
-                    style="width:90px;accent-color:#7c3aed">
+    <span class="modal-title" data-i18n="mask_title">Draw Mask</span>
+    <button id="maskClear" data-i18n="mask_clear">Clear</button>
+    <button id="maskUndo" data-i18n="mask_undo">Undo</button>
+    <button id="maskInvert" data-i18n="mask_invert">Invert</button>
+    <label style="display:flex;align-items:center;gap:6px;color:var(--ink-muted-48);font-size:14px;border:none;margin:0">
+      <span data-i18n="mask_brush">Brush:</span> <input type="range" id="brushSize" min="4" max="300" value="80"
+                    style="width:90px;accent-color:var(--blue)">
       <span id="brushVal">80</span>px
     </label>
-    <button id="maskCancel" style="margin-left:auto">Cancel</button>
-    <button id="maskDone" class="primary">Done</button>
+    <button id="maskCancel" style="margin-left:auto" data-i18n="mask_cancel">Cancel</button>
+    <button id="maskDone" class="primary" data-i18n="mask_done">Done</button>
   </div>
   <div class="modal-canvas-wrap" id="maskCanvasWrap">
     <canvas id="maskCanvas"></canvas>
   </div>
-  <div style="padding:8px 12px;background:#1a1a1a;border-top:1px solid #2a2a2a;
-              font-size:0.75rem;color:#666;flex-shrink:0">
-    White = repaint · Black = keep · Draw with finger or stylus
+  <div style="padding:8px 16px;background:var(--parchment);border-top:1px solid var(--hairline);
+              font-size:12px;color:var(--ink-muted-48);flex-shrink:0">
+    <span data-i18n="mask_hint">White = repaint · Black = keep · Draw with finger or stylus</span>
   </div>
 </div>
 
 <!-- AUTOMASK MODAL -->
 <div id="automaskModal" class="modal hidden">
   <div class="modal-toolbar">
-    <span class="modal-title">Segments</span>
-    <span id="automaskSpinner" style="font-size:0.8rem;color:#888;display:none">Segmenting…</span>
-    <label style="display:flex;align-items:center;gap:6px;color:#aaa;font-size:0.82rem;margin:0;border:none">
-      Pad: <input type="range" id="automaskPad" min="0" max="40" value="0" style="width:70px;accent-color:#7c3aed">
+    <span class="modal-title" data-i18n="automask_title">Segments</span>
+    <span id="automaskSpinner" style="font-size:14px;color:var(--ink-muted-48);display:none" data-i18n="automask_segmenting">Segmenting…</span>
+    <label style="display:flex;align-items:center;gap:6px;color:var(--ink-muted-48);font-size:14px;margin:0;border:none">
+      <span data-i18n="automask_pad">Pad:</span> <input type="range" id="automaskPad" min="0" max="40" value="0" style="width:70px;accent-color:var(--blue)">
       <span id="automaskPadVal">0</span>px
     </label>
-    <button id="automaskCancel" style="margin-left:auto">Cancel</button>
-    <button id="automaskApply" class="primary">Apply Mask</button>
+    <button id="automaskCancel" style="margin-left:auto" data-i18n="automask_cancel">Cancel</button>
+    <button id="automaskApply" class="primary" data-i18n="automask_apply">Apply Mask</button>
   </div>
   <div class="modal-canvas-wrap">
     <canvas id="automaskCanvas"></canvas>
   </div>
-  <div id="automaskChips" style="padding:10px 12px;background:#1a1a1a;border-top:1px solid #2a2a2a;
+  <div id="automaskChips" style="padding:10px 16px;background:var(--parchment);border-top:1px solid var(--hairline);
        display:flex;flex-wrap:wrap;gap:7px;overflow-y:auto;max-height:115px;flex-shrink:0;
        -webkit-overflow-scrolling:touch"></div>
 </div>
 
 <script>
 const $ = id => document.getElementById(id);
+const i18n = { en: {}, zh: {} };
+let currLang = localStorage.getItem("lang") || "en";
+
+function t(key) {
+  return i18n[currLang][key] ?? i18n.en[key] ?? key;
+}
+
+i18n.en = {
+  tab_txt2img: "txt2img",
+  tab_img2img: "img2img",
+  label_prompt: "Prompt",
+  label_neg_prompt: "Negative Prompt",
+  label_input_image: "Input image",
+  label_denoise: "Denoise strength",
+  label_hf_token: "HF Token",
+  label_hf_token_hint: "— required for Automask",
+  hf_token_placeholder: "hf_…",
+  upload_tap: "Tap to upload image",
+  upload_change: "Tap to change image",
+  mask_enable: "Enable mask (inpaint)",
+  mask_edit: "Edit Mask",
+  automask: "Automask",
+  label_size: "Size",
+  label_scheduler: "Scheduler",
+  scheduler_default: "Default",
+  label_steps: "Steps",
+  label_cfg: "CFG scale",
+  label_seed: "Seed",
+  seed_random: "Random",
+  label_clip_skip: "Clip skip",
+  karras: "Karras sigmas",
+  use_opencl: "Use OpenCL (Enables GPU for CPU Models)",
+  generate: "Generate",
+  show_json: "Show JSON",
+  hide_json: "Hide JSON",
+  download: "Download",
+  details_title: "Details",
+  label_time: "Time",
+  label_mode: "Mode",
+  label_denoise_short: "Denoise",
+  progress_starting: "Starting…",
+  progress_done: "Done!",
+  progress_step: "Step",
+  status_reachable: "Local Dream is reachable.",
+  status_unreachable: "Local Dream not reachable — start the app and load a model first.",
+  error_no_prompt: "Please enter a prompt.",
+  error_no_image: "Please upload an input image.",
+  error_stream: "Stream error",
+  error_fetch: "Fetch error",
+  error_connect: "Cannot connect to Local Dream. Is it running?",
+  error_automask: "Automask failed",
+  crop_title: "Position Image",
+  crop_fit: "Fit",
+  crop_fill: "Fill",
+  crop_center: "Center",
+  crop_cancel: "Cancel",
+  crop_confirm: "Confirm",
+  crop_hint: "Drag to reposition · Pinch to zoom · Empty areas will be outpainted",
+  mask_title: "Draw Mask",
+  mask_clear: "Clear",
+  mask_undo: "Undo",
+  mask_invert: "Invert",
+  mask_brush: "Brush",
+  mask_cancel: "Cancel",
+  mask_done: "Done",
+  mask_hint: "White = repaint · Black = keep · Draw with finger or stylus",
+  automask_title: "Segments",
+  automask_segmenting: "Segmenting…",
+  automask_pad: "Pad",
+  automask_cancel: "Cancel",
+  automask_apply: "Apply Mask",
+  custom_size_placeholder: "e.g. 448",
+  adjust_crop: "Adjust crop",
+  ld_url_placeholder: "http://127.0.0.1:8081",
+  ld_status_default: "Default",
+  ld_status_custom: "Custom",
+};
+
+i18n.zh = {
+  tab_txt2img: "文生图",
+  tab_img2img: "图生图",
+  label_prompt: "提示词",
+  label_neg_prompt: "负面提示词",
+  label_input_image: "输入图片",
+  label_denoise: "去噪强度",
+  label_hf_token: "HF 令牌",
+  label_hf_token_hint: "— 自动遮罩需要",
+  hf_token_placeholder: "hf_…",
+  upload_tap: "点击上传图片",
+  upload_change: "点击更换图片",
+  mask_enable: "启用遮罩（局部重绘）",
+  mask_edit: "编辑遮罩",
+  automask: "自动遮罩",
+  label_size: "尺寸",
+  label_scheduler: "调度器",
+  scheduler_default: "默认",
+  label_steps: "步数",
+  label_cfg: "CFG 强度",
+  label_seed: "随机种子",
+  seed_random: "随机",
+  label_clip_skip: "Clip 跳过",
+  karras: "Karras 调度",
+  use_opencl: "使用 OpenCL（为 CPU 模型启用 GPU）",
+  generate: "生成",
+  show_json: "显示 JSON",
+  hide_json: "隐藏 JSON",
+  download: "下载",
+  details_title: "详情",
+  label_time: "用时",
+  label_mode: "模式",
+  label_denoise_short: "去噪",
+  progress_starting: "开始生成…",
+  progress_done: "完成！",
+  progress_step: "步骤",
+  status_reachable: "Local Dream 连接正常。",
+  status_unreachable: "Local Dream 无法连接 — 请先启动应用并加载模型。",
+  error_no_prompt: "请输入提示词。",
+  error_no_image: "请上传输入图片。",
+  error_stream: "流错误",
+  error_fetch: "请求错误",
+  error_connect: "无法连接到 Local Dream。它是否在运行？",
+  error_automask: "自动遮罩失败",
+  crop_title: "调整图片位置",
+  crop_fit: "适应",
+  crop_fill: "填充",
+  crop_center: "居中",
+  crop_cancel: "取消",
+  crop_confirm: "确认",
+  crop_hint: "拖动调整位置 · 双指缩放 · 空白区域会自动外绘",
+  mask_title: "绘制遮罩",
+  mask_clear: "清除",
+  mask_undo: "撤销",
+  mask_invert: "反转",
+  mask_brush: "画笔",
+  mask_cancel: "取消",
+  mask_done: "完成",
+  mask_hint: "白色 = 重绘 · 黑色 = 保留 · 用手指或触控笔画画",
+  automask_title: "分割区域",
+  automask_segmenting: "分割中…",
+  automask_pad: "扩展",
+  automask_cancel: "取消",
+  automask_apply: "应用遮罩",
+  custom_size_placeholder: "例如 448",
+  adjust_crop: "调整裁剪",
+  ld_url_placeholder: "http://127.0.0.1:8081",
+  ld_status_default: "默认",
+  ld_status_custom: "自定义",
+};
+
 let mode = "txt2img";
 let imgB64 = null;          // final composited image (after crop)
 let maskB64 = null;         // final mask PNG (after mask editor or from crop)
@@ -352,9 +589,9 @@ const SEG_COLORS = {
 };
 
 // ─── Mode switching ─────────────────────────────────────────────────────────
-document.querySelectorAll(".tab").forEach(btn =>
+document.querySelectorAll(".sub-nav-tab").forEach(btn =>
   btn.addEventListener("click", () => {
-    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+    document.querySelectorAll(".sub-nav-tab").forEach(t => t.classList.remove("active"));
     btn.classList.add("active");
     mode = btn.dataset.mode;
     $("img2imgSection").classList.toggle("hidden", mode === "txt2img");
@@ -458,7 +695,7 @@ function drawCrop() {
   const csz = 16;
   for (let y = 0; y < sz; y += csz)
     for (let x = 0; x < sz; x += csz) {
-      ctx.fillStyle = ((x + y) / csz) % 2 === 0 ? "#2a2a2a" : "#1e1e1e";
+      ctx.fillStyle = ((x + y) / csz) % 2 === 0 ? "#e0e0e0" : "#f0f0f0";
       ctx.fillRect(x, y, csz, csz);
     }
   ctx.drawImage(cropImg, cropX, cropY, cropImg.width * cropScale, cropImg.height * cropScale);
@@ -598,7 +835,7 @@ $("cropConfirm").addEventListener("click", () => {
   $("imgPreview").src = imgCanvas.toDataURL("image/png");
   $("imgPreview").classList.remove("hidden");
   $("adjustCropBtn").classList.remove("hidden");
-  $("imgUploadLabel").textContent = "Tap to change image";
+  $("imgUploadLabel").textContent = t("upload_change");
   $("automaskBtn").classList.remove("hidden");
   $("editMaskBtn").classList.remove("hidden");
   saveSession();
@@ -756,15 +993,15 @@ function restoreSession() {
   maskB64 = sessionStorage.getItem("maskB64") || null;
 
   // Switch to img2img mode
-  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
-  document.querySelector(".tab[data-mode='img2img']").classList.add("active");
+  document.querySelectorAll(".sub-nav-tab").forEach(t => t.classList.remove("active"));
+  document.querySelector(".sub-nav-tab[data-mode='img2img']").classList.add("active");
   mode = "img2img";
   $("img2imgSection").classList.remove("hidden");
 
   $("imgPreview").src = "data:image/png;base64," + imgB64;
   $("imgPreview").classList.remove("hidden");
   $("adjustCropBtn").classList.remove("hidden");
-  $("imgUploadLabel").textContent = "Tap to change image";
+  $("imgUploadLabel").textContent = t("upload_change");
   $("automaskBtn").classList.remove("hidden");
   $("editMaskBtn").classList.remove("hidden");
 
@@ -826,6 +1063,10 @@ function buildPayload(omitImages = false) {
     cfg: parseFloat($("cfg").value),
   };
   if (!$("seedRandom").checked) p.seed = parseInt($("seed").value);
+  if ($("ldToggle").checked) {
+    const ldUrl = $("ldUrl").value.trim();
+    if (ldUrl) p.local_dream_url = ldUrl.startsWith("http") ? ldUrl : "http://" + ldUrl;
+  }
   const sched = $("scheduler").value;
   if (sched) p.scheduler = sched;
   if ($("karras").checked) p.karras = true;
@@ -847,18 +1088,18 @@ $("genBtn").addEventListener("click", generate);
 
 function generate() {
   const prompt = $("prompt").value.trim();
-  if (!prompt) { showError("Please enter a prompt."); return; }
-  if (mode === "img2img" && !imgB64) { showError("Please upload an input image."); return; }
+  if (!prompt) { showError(t("error_no_prompt")); return; }
+  if (mode === "img2img" && !imgB64) { showError(t("error_no_image")); return; }
 
   hideError();
   const payload = buildPayload(false);
   lastPayload = buildPayload(false); // keep for details panel
 
   $("genBtn").disabled = true;
-  $("outputPanel").style.display = "none";
+  $("outputTile").style.display = "none";
   $("progressWrap").style.display = "block";
   $("progressFill").style.width = "0%";
-  $("progressLabel").textContent = "Starting…";
+  $("progressLabel").textContent = t("progress_starting");
 
   fetch("/generate", {
     method: "POST",
@@ -876,10 +1117,10 @@ function generate() {
         buf = parts.pop();
         for (const chunk of parts) parseSSEChunk(chunk);
         read();
-      }).catch(err => { showError("Stream error: " + err); finishGen(); });
+      }).catch(err => { showError(t("error_stream") + ": " + err); finishGen(); });
     }
     read();
-  }).catch(err => { showError("Fetch error: " + err); finishGen(); });
+  }).catch(err => { showError(t("error_fetch") + ": " + err); finishGen(); });
 }
 
 function parseSSEChunk(chunk) {
@@ -896,12 +1137,12 @@ function parseSSEChunk(chunk) {
     const pct = data.total_steps > 0 ? Math.round((data.step / data.total_steps) * 100) : 0;
     $("progressFill").style.width = pct + "%";
     const displayTotal = lastPayload ? lastPayload.steps : data.total_steps;
-    $("progressLabel").textContent = `Step ${Math.min(data.step, displayTotal)} / ${displayTotal}`;
+    $("progressLabel").textContent = `${t("progress_step")} ${Math.min(data.step, displayTotal)} / ${displayTotal}`;
   } else if (data.type === "complete") {
     $("progressFill").style.width = "100%";
-    $("progressLabel").textContent = "Done!";
+    $("progressLabel").textContent = t("progress_done");
     renderDetails(data);
-    $("outputPanel").style.display = "block";
+    $("outputTile").style.display = "block";
     const setOutput = src => { $("outputImg").src = src; $("dlBtn").href = src; };
     if (lastPayload && lastPayload.mask && lastPayload.image) {
       compositeInpaint(lastPayload.image, data.png_image, lastPayload.mask).then(setOutput);
@@ -909,7 +1150,7 @@ function parseSSEChunk(chunk) {
       setOutput("data:image/png;base64," + data.png_image);
     }
   } else if (data.type === "error") {
-    showError(data.error);
+    showError(t("error_connect"));
   }
 }
 
@@ -917,17 +1158,17 @@ function renderDetails(data) {
   const p = lastPayload || {};
   const schedulerLabels = {
     "euler":"Euler","euler_a":"Euler Ancestral","lcm":"LCM",
-    "dpm++2m":"DPM++ 2M","dpm++2m_sde":"DPM++ 2M SDE","":"Default"
+    "dpm++2m":"DPM++ 2M","dpm++2m_sde":"DPM++ 2M SDE","":""
   };
   const items = [
-    ["Steps", data.steps ?? p.steps],
+    [t("label_steps"), data.steps ?? p.steps],
     ["CFG", data.cfg ?? p.cfg],
     ["Size", `${data.width}×${data.height}`],
-    ["Seed", data.seed ?? p.seed],
-    ["Mode", mode],
-    ["Scheduler", schedulerLabels[data.scheduler ?? p.scheduler ?? ""] ?? (p.scheduler || "Default")],
-    ["Time", `${(data.generation_time_ms/1000).toFixed(1)}s`],
-    p.denoise_strength != null ? ["Denoise", p.denoise_strength] : null,
+    [t("label_seed"), data.seed ?? p.seed],
+    [t("label_mode"), mode],
+    [t("label_scheduler"), schedulerLabels[data.scheduler ?? p.scheduler ?? ""] ?? t("scheduler_default")],
+    [t("label_time"), `${(data.generation_time_ms/1000).toFixed(1)}s`],
+    p.denoise_strength != null ? [t("label_denoise_short"), p.denoise_strength] : null,
   ].filter(Boolean);
   $("detailsGrid").innerHTML = items.map(([k,v]) =>
     `<div class="detail-item"><span class="detail-label">${k}:</span><span class="detail-val">${v}</span></div>`
@@ -1008,15 +1249,83 @@ function hideError() { $("errorMsg").style.display = "none"; }
 // ─── Debug JSON ───────────────────────────────────────────────────────────────
 $("debugBtn").addEventListener("click", () => {
   const box = $("debugBox");
-  if (box.style.display !== "none") { box.style.display = "none"; $("debugBtn").textContent = "Show JSON"; return; }
+  if (box.style.display !== "none") { box.style.display = "none"; $("debugBtn").textContent = t("show_json"); return; }
   box.textContent = JSON.stringify(buildPayload(true), null, 2);
   box.style.display = "block";
-  $("debugBtn").textContent = "Hide JSON";
+  $("debugBtn").textContent = t("hide_json");
 });
 
 // ─── HF Token persistence ────────────────────────────────────────────────────
 $("hfToken").value = localStorage.getItem("hfToken") || "";
-$("hfToken").addEventListener("input", () => localStorage.setItem("hfToken", $("hfToken").value));
+$("hfToken").addEventListener("input", () =>   localStorage.setItem("hfToken", $("hfToken").value));
+
+// Local Dream URL persistence
+const ldUrl = $("ldUrl");
+const ldToggle = $("ldToggle");
+ldUrl.value = localStorage.getItem("ldUrl") || "";
+ldToggle.checked = localStorage.getItem("ldEnabled") === "1";
+ldUrl.disabled = !ldToggle.checked;
+document.getElementById("ldStatusLabel").textContent = ldToggle.checked ? t("ld_status_custom") : t("ld_status_default");
+
+function debounce(fn, ms) {
+  let timer;
+  return (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), ms); };
+}
+
+const checkHealth = debounce(() => {
+  const url = ($("ldToggle").checked && $("ldUrl").value.trim())
+    ? "/health?url=" + encodeURIComponent($("ldUrl").value.trim().startsWith("http") ? $("ldUrl").value.trim() : "http://" + $("ldUrl").value.trim())
+    : "/health";
+  fetch(url).then(r => r.json()).then(d => {
+    const bar = $("statusBar");
+    bar.style.display = "block";
+    if (d.ok) {
+      bar.className = "status-ok";
+      bar.textContent = t("status_reachable");
+      setTimeout(() => { bar.style.display = "none"; }, 3000);
+    } else {
+      bar.className = "status-err";
+      bar.textContent = t("status_unreachable");
+    }
+  });
+}, 500);
+
+ldUrl.addEventListener("input", () => {
+  localStorage.setItem("ldUrl", ldUrl.value);
+  checkHealth();
+});
+
+ldToggle.addEventListener("change", () => {
+  const enabled = ldToggle.checked;
+  ldUrl.disabled = !enabled;
+  if (enabled) ldUrl.value = localStorage.getItem("ldUrl") || "";
+  document.getElementById("ldStatusLabel").textContent = enabled ? t("ld_status_custom") : t("ld_status_default");
+  localStorage.setItem("ldEnabled", enabled ? "1" : "0");
+  checkHealth();
+});
+
+function switchLanguage(lang) {
+  currLang = lang;
+  localStorage.setItem("lang", lang);
+  document.querySelectorAll("[data-i18n]").forEach(el => {
+    const key = el.getAttribute("data-i18n");
+    if (t(key) !== key) el.textContent = t(key);
+  });
+  document.querySelectorAll("[data-i18n-placeholder]").forEach(el => {
+    el.placeholder = t(el.getAttribute("data-i18n-placeholder"));
+  });
+  document.querySelectorAll("[data-i18n-value]").forEach(el => {
+    el.value = t(el.getAttribute("data-i18n-value"));
+  });
+  // Handle imgUploadLabel based on state
+  const hasImage = typeof imgB64 !== "undefined" && imgB64 !== null;
+  const imgLabel = document.getElementById("imgUploadLabel");
+  if (imgLabel) {
+    imgLabel.textContent = hasImage ? t("upload_change") : t("upload_tap");
+  }
+  const toggle = document.getElementById("langToggle");
+  if (toggle) toggle.textContent = lang === "zh" ? "EN" : "中文";
+}
 
 // ─── AUTOMASK ────────────────────────────────────────────────────────────────
 function dilateSegMask(maskImg, padding, sz) {
@@ -1187,9 +1496,9 @@ $("automaskBtn").addEventListener("click", async () => {
   const token = $("hfToken").value.trim();
   const btn = $("automaskBtn");
   btn.disabled = true;
-  btn.textContent = "Segmenting…";
-  hideError();
-  openAutomaskModal();
+    btn.textContent = t("automask_segmenting");
+    hideError();
+    openAutomaskModal();
   $("automaskSpinner").style.display = "";
   $("automaskChips").innerHTML = "";
   automaskBaseImg = new Image();
@@ -1202,7 +1511,7 @@ $("automaskBtn").addEventListener("click", async () => {
       body: JSON.stringify({ image: imgB64, token }),
     });
     const data = await res.json();
-    if (!res.ok) { showError("Automask failed: " + (data.error || res.status)); closeAutomaskModal(); return; }
+    if (!res.ok) { showError(t("error_automask") + ": " + (data.error || res.status)); closeAutomaskModal(); return; }
     const segments = data.filter(s => s.label !== "Background");
     const sz = getTargetSize();
     await Promise.all(segments.map(seg => new Promise(resolve => {
@@ -1222,12 +1531,12 @@ $("automaskBtn").addEventListener("click", async () => {
     drawAutomaskOverlay();
     renderAutomaskChips();
   } catch(e) {
-    showError("Automask error: " + e.message);
+    showError(t("error_automask") + ": " + e.message);
     closeAutomaskModal();
   } finally {
     $("automaskSpinner").style.display = "none";
     btn.disabled = false;
-    btn.textContent = "Automask";
+    btn.textContent = t("automask");
   }
 });
 
@@ -1236,19 +1545,16 @@ $("automaskApply").addEventListener("click", applyAutomask);
 
 restoreSession();
 
-// ─── Health check ─────────────────────────────────────────────────────────────
-fetch("/health").then(r => r.json()).then(d => {
-  const bar = $("statusBar");
-  bar.style.display = "block";
-  if (d.ok) {
-    bar.className = "status-ok";
-    bar.textContent = "Local Dream is reachable.";
-    setTimeout(() => { bar.style.display = "none"; }, 3000);
-  } else {
-    bar.className = "status-err";
-    bar.textContent = "Local Dream not reachable — start the app and load a model first.";
-  }
+// Language toggle
+document.getElementById("langToggle").addEventListener("click", () => {
+  switchLanguage(currLang === "zh" ? "en" : "zh");
 });
+
+// Initialize language
+switchLanguage(currLang);
+
+// ─── Health check ─────────────────────────────────────────────────────────────
+checkHealth();
 </script>
 </body>
 </html>

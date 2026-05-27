@@ -10,28 +10,34 @@ A Flask web UI for the [Local Dream](https://github.com/xororz/local-dream) Andr
 - **Automask** — one-tap clothing/body segmentation via HuggingFace; select segments to build a mask automatically
 - **Full-res inpaint composite** — generated content is composited back onto the original image at its original resolution, not the 512px crop
 - **Crop/position modal** — drag and pinch-zoom your image to fit the generation canvas; empty areas are automatically outpainted
-- **Mask overlay** — active mask shown as a purple tint directly on the image preview
 - **Real-time progress** — SSE streaming shows step-by-step generation progress
-- **Size options** — 512, 640, 768, 1024, or custom (up to 2048)
+- **Size options** — 256, 384, 512, 640, 768, 1024, or custom (up to 2048)
 - **Details panel** — shows Steps, CFG, Size, Seed, Scheduler, and generation time after each run
 - **Session persistence** — uploaded image, mask, and crop region survive page reloads (cleared when tab closes)
+- **Multi-language** — English and Chinese UI, toggle in the top nav bar
+- **Configurable backend** — set a custom Local Dream IP/port when running on different machines
+- **Real-time connectivity** — health check auto-runs on URL changes; instant feedback on backend status
+- **Apple-inspired design** — light parchment canvas, white utility cards, dark output tile, pill buttons, Action Blue accent
 
 ## Requirements
 
-- [Local Dream](https://github.com/xororz/local-dream) installed and running on Android with a model loaded
+- [Local Dream](https://github.com/xororz/local-dream) installed and running with a model loaded
 - Python 3.10+
-- Termux (or any Linux environment)
 
 ## Setup
 
 ```bash
-pip install flask requests pillow
-python app.py
+uv sync
+uv run python app.py
+# Or activate the venv first:
+# .venv\Scripts\activate  (Windows)
+# source .venv/bin/activate  (Linux/macOS)
+# python app.py
 ```
 
 Open `http://127.0.0.1:5000` in a browser. For LAN access from other devices use `http://<your-phone-ip>:5000`.
 
-Local Dream must be running with a model loaded before you hit Generate — the app talks to `http://127.0.0.1:8081`.
+Local Dream must be running with a model loaded before you hit Generate. By default the UI connects to `http://127.0.0.1:8081` — toggle the switch under the title to set a custom address.
 
 ## Usage
 
@@ -51,10 +57,14 @@ Automask uses the [mattmdjaga/segformer_b2_clothes](https://huggingface.co/mattm
 HF_TOKEN=hf_...
 ```
 
+### Language
+
+Click **EN** / **中文** in the top nav bar to switch between English and Chinese. Your preference is saved in `localStorage`.
+
 ## Privacy
 
 No images are saved to disk or sent anywhere. All image data stays in your browser's session storage and is cleared when the tab closes.
 
 ## Credits
 
-This project is a third-party web UI for [Local Dream](https://github.com/xororz/local-dream) by [xororz](https://github.com/xororz). It is not affiliated with or endorsed by the Local Dream project. See [NOTICE](NOTICE) for details.
+This project is a third-party web UI for [Local Dream](https://github.com/xororz/local-dream) by [xoróz](https://github.com/xororz). It is not affiliated with or endorsed by the Local Dream project. See [NOTICE](NOTICE) for details.
