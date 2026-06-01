@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "embedded",
+  "dolt_database": "Local_Dream_WebUI",
+  "project_id": "b229beda-768b-4210-a746-1d50fba14829"
+}
