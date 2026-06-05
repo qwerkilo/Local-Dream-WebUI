@@ -63,6 +63,28 @@ HF_TOKEN=hf_...
 
 Click **EN** / **中文** in the top nav bar to switch between English and Chinese. Your preference is saved in `localStorage`.
 
+### Trusted-backend allowlist (optional)
+
+By default the WebUI will proxy `Generate` requests to whatever URL the user types (or to `http://127.0.0.1:8081`). To refuse untrusted backends, set a comma-separated allowlist in `.env`:
+
+```
+LD_ALLOWED_HOSTS=127.0.0.1:8081,192.168.1.42:8081
+```
+
+Any `local_dream_url` whose `host:port` is not in this list silently falls back to the default. Mismatches do not raise — this is intentional, so an attacker cannot probe backend existence via error responses.
+
+## Development
+
+Install dev dependencies and run the test suite:
+
+```bash
+uv sync --group dev
+uv run pytest              # full suite (62 tests, ~0.5s)
+uv run pytest -m "not performance"   # skip the 4 perf benchmarks
+```
+
+The test suite covers SSE parsing, event handlers, URL resolution, the trusted-host allowlist, the HF Automask adapter, and end-to-end route dispatch with mocked backends. No real HTTP is sent to Local Dream or HuggingFace.
+
 ## Screenshots
 
 ![Apple theme — parameters panel](./assets/image-20260527155403713.png)

@@ -63,6 +63,28 @@ HF_TOKEN=hf_...
 
 点击顶部导航栏的 **EN** / **中文** 切换界面语言。偏好设置保存在 `localStorage` 中。
 
+### 可信后端白名单（可选）
+
+默认情况下，WebUI 会把"生成"请求代理到用户输入的 URL（或 `http://127.0.0.1:8081`）。如需拒绝未授权后端，可在 `.env` 中设置逗号分隔的白名单：
+
+```
+LD_ALLOWED_HOSTS=127.0.0.1:8081,192.168.1.42:8081
+```
+
+任何 `local_dream_url` 的 `host:port` 不在列表中时，会静默回落默认 URL。不抛错——这是有意为之，避免攻击者通过错误响应探测后端存在性。
+
+## 开发
+
+安装开发依赖并运行测试：
+
+```bash
+uv sync --group dev
+uv run pytest              # 完整套件（62 个测试，约 0.5s）
+uv run pytest -m "not performance"   # 跳过 4 个性能基准
+```
+
+测试覆盖 SSE 解析、事件 handler、URL 解析、可信后端白名单、HF Automask 适配器，以及带 mock 后端的端到端路由派发。不会向 Local Dream 或 HuggingFace 发送真实 HTTP。
+
 ## 界面截图
 
 ![Apple 主题 — 参数面板](./assets/image-20260527155403713.png)

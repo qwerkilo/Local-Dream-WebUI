@@ -83,6 +83,11 @@
     --status-err-color: #fca5a5;
     --dot-ok: #6ee7b7;
     --dot-err: #fca5a5;
+    /* 角落光斑（Aurora）颜色变量 */
+    --aurora-1: rgba(255, 128, 181, 0.7);
+    --aurora-2: rgba(144, 137, 252, 0.7);
+    --aurora-3: rgba(34, 211, 238, 0.6);
+    --aurora-4: rgba(124, 58, 237, 0.65);
   }
   body { font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif; background: var(--body-bg); color: var(--ink); min-height: 100vh; -webkit-font-smoothing: antialiased; }
   .app { max-width: 800px; margin: 0 auto; padding: 0 16px 80px; }
@@ -94,7 +99,7 @@
   .preset-row select { flex: 1; }
   .preset-btn { padding: 8px 14px; background: var(--pearl); border: 3px solid var(--divider-soft);
                 border-radius: var(--radius-md); color: var(--ink-muted-80); font-size: 14px;
-                cursor: pointer; white-space: nowrap; }
+                cursor: pointer; white-space: nowrap; min-height: 44px; }
   .preset-btn:active { transform: scale(0.95); }
   .ld-label { font-size: 14px; color: var(--ink-muted-48); min-width: 56px; font-weight: 400; }
   .ld-input { flex: 1; }
@@ -111,12 +116,14 @@
              height: 52px; border-radius: var(--radius-pill); padding: 0 6px; }
   .sub-nav-tab { padding: 8px 22px; border-radius: var(--radius-pill); border: none; cursor: pointer;
                  background: transparent; color: var(--ink-muted-48); font-size: 14px;
-                 font-weight: 400; transition: all 0.15s; white-space: nowrap; }
+                 font-weight: 400; transition: all 0.15s; white-space: nowrap; min-height: 36px; }
   .sub-nav-tab.active { background: var(--blue); color: white; }
   .sub-nav-tab:hover:not(.active) { background: rgba(0,0,0,0.04); }
   .sub-nav-spacer { flex: 1; }
   .sub-nav-cta { padding: 8px 22px; border-radius: var(--radius-pill); border: none; cursor: pointer;
-                 background: var(--blue); color: white; font-size: 14px; font-weight: 400; }
+                 background: var(--blue); color: white; font-size: 14px; font-weight: 400;
+                 min-height: 36px; display: inline-flex; align-items: center; gap: 6px; }
+  .sub-nav-cta svg { width: 16px; height: 16px; flex-shrink: 0; }
 
   .card { background: var(--canvas); border: 1px solid var(--hairline); border-radius: var(--radius-lg);
           padding: 24px; margin-bottom: 16px; }
@@ -163,7 +170,7 @@
   .mask-toggle-row { display: flex; align-items: center; gap: 10px; margin-top: 16px; margin-bottom: 0; }
   .edit-mask-btn { padding: 8px 14px; background: var(--pearl); border: 3px solid var(--divider-soft);
                    border-radius: var(--radius-md); color: var(--ink-muted-80); font-size: 14px;
-                   cursor: pointer; }
+                   cursor: pointer; min-height: 44px; display: inline-flex; align-items: center; }
   .edit-mask-btn:active { transform: scale(0.95); }
   .mask-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%;
                   pointer-events: none; border-radius: 6px; display: none; }
@@ -178,14 +185,15 @@
   .gen-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
   .debug-btn { padding: 11px 22px; background: var(--pearl); border: 3px solid var(--divider-soft);
                border-radius: var(--radius-md); color: var(--ink-muted-80); font-size: 14px;
-               cursor: pointer; white-space: nowrap; }
+               cursor: pointer; white-space: nowrap; min-height: 44px;
+               display: inline-flex; align-items: center; }
   .debug-btn:active { transform: scale(0.95); }
   pre#debugBox { display: none; margin-top: 8px; padding: 12px 16px; background: var(--parchment);
     border: 1px solid var(--hairline); border-radius: var(--radius-md); font-size: 12px; color: var(--ink-muted-48);
     overflow-x: auto; white-space: pre-wrap; word-break: break-all; }
 
   /* Progress */
-  #progressBar { height: 4px; background: var(--hairline); border-radius: 2px; overflow: hidden; }
+  #progressBar { height: 6px; background: var(--hairline); border-radius: 3px; overflow: hidden; }
   #progressFill { height: 100%; background: var(--blue); width: 0; transition: width 0.2s; }
   #progressLabel { font-size: 14px; color: var(--ink-muted-48); margin-top: 8px; }
   #progressWrap { margin-top: 16px; display: none; padding: 20px 0; }
@@ -194,14 +202,15 @@
                padding: 48px 32px; margin-top: 16px; display: none; }
 
   #outputPanel { display: block; }
-  #outputPanel img { max-width: 100%; border-radius: var(--radius-sm); display: block; }
+  #outputPanel img { max-width: 100%; border-radius: var(--radius-sm); display: block;
+                     aspect-ratio: 1 / 1; height: auto; background: var(--parchment); }
   #detailsBox { margin-top: 16px; }
   .details-title { font-size: 14px; font-weight: 600; line-height: 1.29; letter-spacing: -0.224px;
                    color: var(--body-muted); margin-bottom: 8px; }
   .details-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px 16px; }
   .detail-item { font-size: 17px; font-weight: 400; line-height: 1.47; letter-spacing: -0.374px; }
   .detail-label { color: var(--body-muted); }
-  .detail-val { color: white; margin-left: 4px; }
+  .detail-val { color: white; margin-left: 4px; font-variant-numeric: tabular-nums; }
   .dl-btn { display: inline-block; margin-top: 12px; padding: 11px 22px; background: var(--blue);
             border: none; border-radius: var(--radius-pill); color: white; text-decoration: none;
             font-size: 17px; cursor: pointer; }
@@ -212,7 +221,11 @@
   .status-dot.ok { background: var(--dot-ok); }
   .status-dot.err { background: var(--dot-err); }
   .status-text { font-size: 12px; color: var(--ink-muted-48); }
-  #errorMsg { color: var(--status-err-color); font-size: 14px; margin-top: 8px; display: none; }
+  #errorMsg { color: var(--status-err-color); font-size: 14px; margin-top: 8px; display: none;
+              padding: 10px 14px; background: var(--status-err-bg); border-radius: var(--radius-md);
+              align-items: flex-start; gap: 8px; }
+  #errorMsg.shown { display: flex; }
+  #errorMsg svg { width: 16px; height: 16px; flex-shrink: 0; margin-top: 1px; }
 
   /* === MODALS === */
   .modal { position: fixed; inset: 0; z-index: 100; background: var(--canvas);
@@ -238,6 +251,130 @@
   .seg-chip.selected { border-color: var(--blue); color: var(--blue); }
   .seg-chip:active { transform: scale(0.95); }
   .seg-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+  /* === ICONS === */
+  .icon { display: inline-block; width: 1em; height: 1em; vertical-align: -0.125em;
+          fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round;
+          stroke-linejoin: round; flex-shrink: 0; }
+  .icon-18 { width: 18px; height: 18px; }
+  .icon-16 { width: 16px; height: 16px; }
+
+  /* === SPINNER === */
+  .spinner { display: inline-block; width: 16px; height: 16px; border-radius: 50%;
+             border: 2px solid currentColor; border-top-color: var(--blue);
+             border-right-color: rgba(255,255,255,0.4); animation: spin 0.8s linear infinite;
+             vertical-align: -3px; }
+  .spinner[hidden] { display: none; }
+  .icon[hidden] { display: none; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .gen-btn .spinner { margin-right: 8px; }
+  .gen-btn[aria-busy="true"] { opacity: 0.85; cursor: progress; }
+
+  /* === TOKEN EYE TOGGLE === */
+  .token-row { position: relative; }
+  .token-row input { padding-right: 44px; }
+  .token-toggle { position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+                  background: transparent; border: none; color: var(--ink-muted-48);
+                  cursor: pointer; padding: 8px; min-width: 36px; min-height: 36px;
+                  display: inline-flex; align-items: center; justify-content: center;
+                  border-radius: var(--radius-sm); }
+  .token-toggle:hover { color: var(--ink); background: var(--parchment); }
+  .token-toggle:focus-visible { outline: 2px solid var(--blue-focus); outline-offset: 0; }
+
+  /* === PROMPT MODAL === */
+  #promptModal .modal-body { padding: 24px; flex: 1; overflow-y: auto;
+                              display: flex; flex-direction: column; gap: 16px; }
+  #promptModal .modal-body p { font-size: 16px; line-height: 1.5; color: var(--ink); margin: 0; }
+  #promptModal .modal-body input { width: 100%; }
+  #promptModal .danger-text { color: var(--status-err-color); }
+
+  /* === MODE SWITCH (img2img slide) === */
+  #img2imgSection { overflow: hidden; transition: max-height 0.2s ease-out, opacity 0.2s ease-out;
+                    max-height: 2000px; opacity: 1; }
+  #img2imgSection.collapsed { max-height: 0; opacity: 0; margin-top: 0 !important;
+                               pointer-events: none; }
+
+  /* === SIZE CUSTOM ANIMATION === */
+  #sizeCustom { overflow: hidden; transition: max-height 0.2s ease-out, margin-top 0.2s ease-out;
+                max-height: 60px; }
+  #sizeCustom.collapsed { max-height: 0; margin-top: 0 !important; }
+
+  /* === FOCUS VISIBLE === */
+  :focus { outline: none; }
+  :focus-visible { outline: 2px solid var(--blue-focus); outline-offset: 2px; border-radius: 4px; }
+  button:focus-visible { outline-offset: 2px; }
+  .toggle input:focus-visible + .toggle-slider { box-shadow: 0 0 0 3px rgba(0,113,227,0.35); }
+
+  /* === RESPONSIVE === */
+  @media (max-width: 480px) {
+    .app { padding: 0 12px 60px; }
+    h1 { font-size: 28px; }
+    .grid2, .details-grid { grid-template-columns: 1fr; }
+    .sub-nav { flex-wrap: wrap; height: auto; min-height: 52px; padding: 6px; }
+    .sub-nav-tab { padding: 8px 14px; font-size: 13px; }
+    .sub-nav-cta { padding: 8px 14px; font-size: 13px; }
+    .card { padding: 18px; }
+    .gen-btn { padding: 12px 18px; font-size: 16px; }
+    .debug-btn { padding: 10px 16px; }
+    .preset-row { flex-wrap: wrap; }
+    .preset-row select { flex: 1 1 100%; }
+    .ld-row { flex-wrap: wrap; }
+    .ld-input { flex: 1 1 100%; }
+  }
+
+  /* === SAFE AREA === */
+  @supports (padding: env(safe-area-inset-top)) {
+    .header-row { padding-top: calc(16px + env(safe-area-inset-top)); }
+    .sub-nav { margin-top: env(safe-area-inset-top); }
+    .app { padding-bottom: calc(80px + env(safe-area-inset-bottom)); }
+  }
+
+  /* === REDUCED MOTION === */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  /* === AURORA 角落光斑 === */
+  .aurora-bg {
+    display: none;
+  }
+  .theme-original .aurora-bg {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    overflow: hidden;
+  }
+  .aurora-blob {
+    position: absolute;
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    filter: blur(28px);
+    opacity: 0.75;
+    will-change: transform;
+  }
+  .aurora-blob-1 { top: -25px; left: -25px;   background: radial-gradient(circle, var(--aurora-1), transparent 70%); }
+  .aurora-blob-2 { top: -20px; right: -20px;  background: radial-gradient(circle, var(--aurora-2), transparent 70%); }
+  .aurora-blob-3 { bottom: -25px; left: 20%;  background: radial-gradient(circle, var(--aurora-3), transparent 70%); }
+  .aurora-blob-4 { bottom: -20px; right: 10%; background: radial-gradient(circle, var(--aurora-4), transparent 70%); }
+  @keyframes drift1 { from { transform: translate(0, 0); } to { transform: translate( 20px,  15px); } }
+  @keyframes drift2 { from { transform: translate(0, 0); } to { transform: translate(-15px,  20px); } }
+  @keyframes drift3 { from { transform: translate(0, 0); } to { transform: translate( 25px, -10px); } }
+  @keyframes drift4 { from { transform: translate(0, 0); } to { transform: translate(-20px, -15px); } }
+  .aurora-blob-1 { animation: drift1  8s ease-in-out infinite alternate; }
+  .aurora-blob-2 { animation: drift2 10s ease-in-out infinite alternate; }
+  .aurora-blob-3 { animation: drift3 12s ease-in-out infinite alternate; }
+  .aurora-blob-4 { animation: drift4  9s ease-in-out infinite alternate; }
+  @media (max-width: 480px) {
+    .aurora-blob { width: 80px; height: 80px; filter: blur(22px); opacity: 0.55; }
+  }
 </style>
 </head>
 <body>
@@ -253,16 +390,16 @@
     </label>
     <span class="ld-label" id="ldStatusLabel">Default</span>
     <input type="text" class="ld-input" id="ldUrl" data-i18n-placeholder="ld_url_placeholder" placeholder="http://127.0.0.1:8081" disabled>
-    <span class="status-dot" id="statusDot"></span>
-    <span class="status-text" id="statusText"></span>
+    <span class="status-dot" id="statusDot" role="status" aria-live="polite"></span>
+    <span class="status-text" id="statusText" role="status" aria-live="polite"></span>
   </div>
 
   <div class="sub-nav">
     <button class="sub-nav-tab active" data-mode="txt2img" data-i18n="tab_txt2img">txt2img</button>
     <button class="sub-nav-tab" data-mode="img2img" data-i18n="tab_img2img">img2img</button>
     <span class="sub-nav-spacer"></span>
-    <button class="sub-nav-cta" id="themeToggle">🎨 Original</button>
-    <button class="sub-nav-cta" id="langToggle">中文</button>
+    <button class="sub-nav-cta" id="themeToggle" data-i18n-title="theme_toggle_title" title="Toggle theme" aria-label="Toggle theme"><span id="themeIcon" class="icon icon-16"></span><span id="themeLabel" data-i18n="theme_label_apple">Apple</span></button>
+    <button class="sub-nav-cta" id="langToggle" data-i18n-title="lang_toggle_title" title="Switch language" aria-label="Switch language">中文</button>
   </div>
 
   <div class="card">
@@ -300,7 +437,10 @@
     </div>
     <div class="section" style="margin-bottom:6px">
       <label><span data-i18n="label_hf_token">HF Token</span> <span style="color:var(--ink-muted-48);font-size:0.75rem" data-i18n="label_hf_token_hint">— required for Automask</span></label>
+      <div class="token-row">
       <input type="password" id="hfToken" data-i18n-placeholder="hf_token_placeholder" placeholder="hf_…" autocomplete="off">
+      <button type="button" class="token-toggle" id="hfTokenToggle" aria-label="Show token" title="Show token"><span id="hfTokenIcon" class="icon icon-18"></span></button>
+    </div>
     </div>
     <div class="mask-toggle-row">
       <div class="check-row" style="margin:0">
@@ -385,11 +525,11 @@
   </div>
 
   <div class="btn-row">
-    <button class="gen-btn" id="genBtn" data-i18n="generate">Generate</button>
+    <button class="gen-btn" id="genBtn" data-i18n="generate" aria-busy="false"><span id="genSpinner" class="spinner" hidden></span><span id="genLabel">Generate</span></button>
     <button class="debug-btn" id="debugBtn">Show JSON</button>
   </div>
+  <div id="errorMsg" role="alert" aria-live="assertive"><span id="errorIcon" class="icon icon-16"></span><span id="errorText"></span></div>
   <pre id="debugBox"></pre>
-  <div id="errorMsg"></div>
   </div>
 
   <div id="progressWrap">
@@ -399,7 +539,7 @@
 
   <div class="dark-tile" id="outputTile">
   <div id="outputPanel">
-    <img id="outputImg" alt="output">
+    <img id="outputImg" alt="output" width="512" height="512">
     <div id="detailsBox">
       <div class="details-title" data-i18n="details_title">Details</div>
       <div id="detailsGrid" class="details-grid"></div>
@@ -410,14 +550,14 @@
 </div>
 
 <!-- CROP MODAL -->
-<div id="cropModal" class="modal hidden">
+<div id="cropModal" class="modal hidden" role="dialog" aria-modal="true">
   <div class="modal-toolbar">
     <span class="modal-title" data-i18n="crop_title">Position Image</span>
     <button id="cropFit" data-i18n="crop_fit">Fit</button>
     <button id="cropFill" data-i18n="crop_fill">Fill</button>
     <button id="cropCenter" data-i18n="crop_center">Center</button>
-    <button id="cropZoomIn">＋</button>
-    <button id="cropZoomOut">－</button>
+    <button id="cropZoomIn" aria-label="Zoom in" title="Zoom in">+</button>
+    <button id="cropZoomOut" aria-label="Zoom out" title="Zoom out">−</button>
     <button id="cropCancel" style="margin-left:auto" data-i18n="crop_cancel">Cancel</button>
     <button id="cropConfirm" class="primary" data-i18n="crop_confirm">Confirm</button>
   </div>
@@ -431,7 +571,7 @@
 </div>
 
 <!-- MASK MODAL -->
-<div id="maskModal" class="modal hidden">
+<div id="maskModal" class="modal hidden" role="dialog" aria-modal="true">
   <div class="modal-toolbar">
     <span class="modal-title" data-i18n="mask_title">Draw Mask</span>
     <button id="maskClear" data-i18n="mask_clear">Clear</button>
@@ -455,7 +595,7 @@
 </div>
 
 <!-- AUTOMASK MODAL -->
-<div id="automaskModal" class="modal hidden">
+<div id="automaskModal" class="modal hidden" role="dialog" aria-modal="true">
   <div class="modal-toolbar">
     <span class="modal-title" data-i18n="automask_title">Segments</span>
     <span id="automaskSpinner" style="font-size:14px;color:var(--ink-muted-48);display:none" data-i18n="automask_segmenting">Segmenting…</span>
@@ -474,8 +614,92 @@
        -webkit-overflow-scrolling:touch"></div>
 </div>
 
+
+<!-- PROMPT MODAL (preset save / delete) -->
+<div id="promptModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="promptModalTitle">
+  <div class="modal-toolbar">
+    <span class="modal-title" id="promptModalTitle" data-i18n="prompt_modal_title">Confirm</span>
+    <button id="promptCancel" style="margin-left:auto" data-i18n="prompt_modal_cancel">Cancel</button>
+    <button id="promptConfirm" class="primary" data-i18n="prompt_modal_confirm">OK</button>
+  </div>
+  <div class="modal-body" id="promptBody"></div>
+</div>
+
 <script>
 const $ = id => document.getElementById(id);
+// === ICON SYSTEM (inline SVG, Lucide-style 1.75 stroke) ===
+const SVG_NS = "http://www.w3.org/2000/svg";
+const ICON_PATHS = {
+  sun:     '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>',
+  moon:    '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>',
+  eye:     '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>',
+  "eye-off":'<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>',
+  "alert-triangle":'<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>'
+};
+function renderIcon(target, name) {
+  const path = ICON_PATHS[name];
+  if (!target || !path) return;
+  target.innerHTML = '<svg class="icon" viewBox="0 0 24 24" xmlns="' + SVG_NS + '" aria-hidden="true">' + path + '</svg>';
+}
+
+// === MODAL HELPERS (Esc + focus management) ===
+function openModal(modal, opener) {
+  if (!modal) return;
+  modal._opener = opener || document.activeElement;
+  modal.classList.remove("hidden");
+  document.body.style.overflow = "hidden";
+  const first = modal.querySelector(".modal-toolbar button, .modal-toolbar input, .modal-body input");
+  if (first) first.focus();
+}
+function closeModal(modal) {
+  if (!modal) return;
+  modal.classList.add("hidden");
+  if (!document.querySelector(".modal:not(.hidden)")) document.body.style.overflow = "";
+  if (modal._opener && typeof modal._opener.focus === "function") modal._opener.focus();
+  modal._opener = null;
+}
+["cropModal","maskModal","automaskModal","promptModal"].forEach(id => {
+  const m = $(id);
+  if (!m) return;
+  m.addEventListener("keydown", e => { if (e.key === "Escape") closeModal(m); });
+});
+
+// === PROMPT MODAL (replaces native prompt()/confirm()) ===
+function openPromptModal(opts) {
+  return new Promise(resolve => {
+    const { title, body, defaultValue, confirmLabel, danger } = opts;
+    $("promptModalTitle").textContent = title;
+    $("promptConfirm").textContent = confirmLabel || t("prompt_modal_confirm");
+    if (defaultValue != null) {
+      $("promptBody").innerHTML = '<input type="text" id="promptModalInput" value="' + String(defaultValue).replace(/"/g, "&quot;") + '">';
+    } else {
+      $("promptBody").innerHTML = '<p class="' + (danger ? "danger-text" : "") + '">' + (body || "") + '</p>';
+    }
+    const confirm = $("promptConfirm");
+    const cancel = $("promptCancel");
+    const cleanup = () => {
+      confirm.removeEventListener("click", onConfirm);
+      cancel.removeEventListener("click", onCancel);
+    };
+    const onConfirm = () => {
+      const v = defaultValue != null ? ($("promptModalInput").value.trim() || null) : true;
+      cleanup();
+      closeModal($("promptModal"));
+      resolve(v);
+    };
+    const onCancel = () => { cleanup(); closeModal($("promptModal")); resolve(null); };
+    confirm.addEventListener("click", onConfirm);
+    cancel.addEventListener("click", onCancel);
+    openModal($("promptModal"), document.activeElement);
+    if (defaultValue != null) {
+      const inp = $("promptModalInput");
+      inp.focus(); inp.select();
+      inp.addEventListener("keydown", e => { if (e.key === "Enter") onConfirm(); });
+    }
+  });
+}
+
+
 const i18n = { en: {}, zh: {} };
 let currLang = localStorage.getItem("lang") || "en";
 
@@ -558,6 +782,18 @@ i18n.en = {
   preset_delete: "Delete",
   preset_name_prompt: "Preset name",
   preset_confirm_delete: "Delete this preset?",
+  preset_modal_save_title: "保存预设",
+  preset_modal_delete_title: "删除预设",
+  preset_modal_delete_body: "删除此预设？",
+  theme_label_apple: "Apple",
+  theme_label_original: "Original",
+  theme_toggle_title: "切换主题",
+  lang_toggle_title: "切换语言",
+  hf_token_show: "显示令牌",
+  hf_token_hide: "隐藏令牌",
+  prompt_modal_title: "确认",
+  prompt_modal_confirm: "确认",
+  prompt_modal_cancel: "取消",
 };
 
 i18n.zh = {
@@ -635,6 +871,18 @@ i18n.zh = {
   preset_delete: "删除",
   preset_name_prompt: "预设名称",
   preset_confirm_delete: "删除此预设？",
+  preset_modal_save_title: "Save preset",
+  preset_modal_delete_title: "Delete preset",
+  preset_modal_delete_body: "Delete this preset?",
+  theme_label_apple: "Apple",
+  theme_label_original: "Original",
+  theme_toggle_title: "Toggle theme",
+  lang_toggle_title: "Switch language",
+  hf_token_show: "Show token",
+  hf_token_hide: "Hide token",
+  prompt_modal_title: "Confirm",
+  prompt_modal_confirm: "OK",
+  prompt_modal_cancel: "Cancel",
 };
 
 let mode = "txt2img";
@@ -677,7 +925,7 @@ document.querySelectorAll(".sub-nav-tab").forEach(btn =>
     document.querySelectorAll(".sub-nav-tab").forEach(t => t.classList.remove("active"));
     btn.classList.add("active");
     mode = btn.dataset.mode;
-    $("img2imgSection").classList.toggle("hidden", mode === "txt2img");
+    $("img2imgSection").classList.toggle("collapsed", mode === "txt2img");
   })
 );
 
@@ -691,7 +939,7 @@ document.querySelectorAll(".sub-nav-tab").forEach(btn =>
 
 // ─── Size custom ─────────────────────────────────────────────────────────────
 $("size").addEventListener("change", () =>
-  $("sizeCustom").classList.toggle("hidden", $("size").value !== "custom")
+  $("sizeCustom").classList.toggle("collapsed", $("size").value !== "custom")
 );
 
 // ─── Seed random toggle ──────────────────────────────────────────────────────
@@ -701,9 +949,10 @@ $("seedRandom").addEventListener("change", () =>
 
 // ─── Mask toggle ─────────────────────────────────────────────────────────────
 $("maskEnabled").addEventListener("change", () => {
-  const show = $("maskEnabled").checked && imgB64;
-  $("editMaskBtn").classList.toggle("hidden", !$("maskEnabled").checked);
-  if (!$("maskEnabled").checked) { maskB64 = null; updateMaskThumb(); }
+  const on = $("maskEnabled").checked;
+  $("editMaskBtn").classList.toggle("hidden", !on || !imgB64);
+  $("automaskBtn").classList.toggle("hidden", !on || !imgB64);
+  if (!on) { maskB64 = null; updateMaskThumb(); }
 });
 
 // ─── Image upload → crop modal ───────────────────────────────────────────────
@@ -742,15 +991,11 @@ function openCropModal(img) {
 
   // Initial: fit inside canvas
   applyCropFit();
-  $("cropModal").classList.remove("hidden");
-  document.body.style.overflow = "hidden";
+  openModal($("cropModal"));
   drawCrop();
 }
 
-function closeCropModal() {
-  $("cropModal").classList.add("hidden");
-  document.body.style.overflow = "";
-}
+function closeCropModal() { closeModal($("cropModal")); }
 
 function applyCropFit() {
   const sz = getTargetSize();
@@ -961,14 +1206,10 @@ function openMaskModal() {
 
   canvas.style.opacity = "0.7";
 
-  $("maskModal").classList.remove("hidden");
-  document.body.style.overflow = "hidden";
+  openModal($("maskModal"));
 }
 
-function closeMaskModal() {
-  $("maskModal").classList.add("hidden");
-  document.body.style.overflow = "";
-}
+function closeMaskModal() { closeModal($("maskModal")); }
 
 function maskCanvasPos(e) {
   const canvas = $("maskCanvas");
@@ -1028,11 +1269,11 @@ $("maskInvert").addEventListener("click", () => {
   maskHistory.push(maskCtx.getImageData(0, 0, c.width, c.height));
   const d = maskCtx.getImageData(0, 0, c.width, c.height);
   for (let i = 0; i < d.data.length; i += 4) {
-    const a = d.data[i+3];
+    if (d.data[i+3] === 0) continue; // leave transparent pixels transparent
     d.data[i] = 255 - d.data[i];
     d.data[i+1] = 255 - d.data[i+1];
     d.data[i+2] = 255 - d.data[i+2];
-    d.data[i+3] = a === 0 ? 255 : 0;
+    // alpha unchanged
   }
   maskCtx.putImageData(d, 0, 0);
 });
@@ -1179,6 +1420,9 @@ function generate() {
   lastPayload = buildPayload(false); // keep for details panel
 
   $("genBtn").disabled = true;
+  $("genBtn").setAttribute("aria-busy", "true");
+  $("genSpinner").hidden = false;
+  $("genLabel").textContent = t("progress_starting");
   $("outputTile").style.display = "none";
   $("progressWrap").style.display = "block";
   $("progressFill").style.width = "0%";
@@ -1216,12 +1460,29 @@ function parseSSEChunk(chunk) {
   let data;
   try { data = JSON.parse(dataStr); } catch { return; }
 
-  if (data.type === "progress") {
-    const pct = data.total_steps > 0 ? Math.round((data.step / data.total_steps) * 100) : 0;
+  // 优先以 SSE event: 字段分派（来自后端 EVENT_HANDLERS 注册的事件类型），
+  // 缺省时回退到 data.type 字段（兼容旧版 Local Dream 把类型塞在 JSON 里）。
+  const evt = eventType || data.type;
+
+  if (evt === "progress") {
+    // 后端 progress_handler 已尽力算出 percent；多字段名兜底以防上游变种。
+    const step = Number(data.step) || 0;
+    const total = Number(data.total ?? data.total_steps ?? data.max_steps ?? data.steps) || 0;
+    let pct;
+    if (typeof data.percent === "number") {
+      pct = Math.max(0, Math.min(100, data.percent));
+    } else if (total > 0) {
+      pct = Math.round((step / total) * 100);
+    } else {
+      pct = 0;
+    }
     $("progressFill").style.width = pct + "%";
-    const displayTotal = lastPayload ? lastPayload.steps : data.total_steps;
-    $("progressLabel").textContent = `${t("progress_step")} ${Math.min(data.step, displayTotal)} / ${displayTotal}`;
-  } else if (data.type === "complete") {
+    const displayTotal = total > 0 ? total : (lastPayload ? lastPayload.steps : 0);
+    const displayStep = displayTotal > 0 ? Math.min(step, displayTotal) : step;
+    $("progressLabel").textContent = displayTotal > 0
+      ? `${t("progress_step")} ${displayStep} / ${displayTotal}`
+      : t("progress_starting");
+  } else if (evt === "complete") {
     $("progressFill").style.width = "100%";
     $("progressLabel").textContent = t("progress_done");
     renderDetails(data);
@@ -1232,7 +1493,7 @@ function parseSSEChunk(chunk) {
     } else {
       setOutput("data:image/png;base64," + data.png_image);
     }
-  } else if (data.type === "error") {
+  } else if (evt === "error") {
     showError(t("error_connect"));
   }
 }
@@ -1258,7 +1519,12 @@ function renderDetails(data) {
   ).join("");
 }
 
-function finishGen() { $("genBtn").disabled = false; }
+function finishGen() {
+  $("genBtn").disabled = false;
+  $("genBtn").setAttribute("aria-busy", "false");
+  $("genSpinner").hidden = true;
+  $("genLabel").textContent = t("generate");
+}
 
 async function compositeInpaint(origB64, genB64, maskB64) {
   const load = b64 => new Promise(res => {
@@ -1326,8 +1592,12 @@ async function compositeInpaint(origB64, genB64, maskB64) {
   ctx.putImageData(out, 0, 0);
   return off.toDataURL("image/png");
 }
-function showError(msg) { $("errorMsg").textContent = msg; $("errorMsg").style.display = ""; }
-function hideError() { $("errorMsg").style.display = "none"; }
+function showError(msg) {
+  $("errorText").textContent = msg;
+  renderIcon($("errorIcon"), "alert-triangle");
+  $("errorMsg").classList.add("shown");
+}
+function hideError() { $("errorMsg").classList.remove("shown"); }
 
 // ─── Debug JSON ───────────────────────────────────────────────────────────────
 $("debugBtn").addEventListener("click", () => {
@@ -1341,6 +1611,18 @@ $("debugBtn").addEventListener("click", () => {
 // ─── HF Token persistence ────────────────────────────────────────────────────
 $("hfToken").value = localStorage.getItem("hfToken") || "";
 $("hfToken").addEventListener("input", () =>   localStorage.setItem("hfToken", $("hfToken").value));
+
+const hfTokenToggle = $("hfTokenToggle");
+renderIcon($("hfTokenIcon"), "eye");
+hfTokenToggle.addEventListener("click", () => {
+  const inp = $("hfToken");
+  const showing = inp.type === "text";
+  inp.type = showing ? "password" : "text";
+  renderIcon($("hfTokenIcon"), showing ? "eye" : "eye-off");
+  const label = showing ? t("hf_token_show") : t("hf_token_hide");
+  hfTokenToggle.setAttribute("aria-label", label);
+  hfTokenToggle.setAttribute("title", label);
+});
 
 // Local Dream URL persistence
 const ldUrl = $("ldUrl");
@@ -1420,8 +1702,12 @@ $("presetSelect").addEventListener("change", () => {
   if (name) applyPreset(name, presets);
 });
 
-$("presetSave").addEventListener("click", () => {
-  const name = prompt(t("preset_name_prompt"));
+$("presetSave").addEventListener("click", async () => {
+  const name = await openPromptModal({
+    title: t("preset_modal_save_title"),
+    defaultValue: "",
+    confirmLabel: t("preset_save")
+  });
   if (!name) return;
   presets[name] = {
     prompt: $("prompt").value,
@@ -1440,10 +1726,17 @@ $("presetSave").addEventListener("click", () => {
   sel.value = name;
 });
 
-$("presetDelete").addEventListener("click", () => {
+$("presetDelete").addEventListener("click", async () => {
   const sel = $("presetSelect");
   const name = sel.value;
-  if (!name || !confirm(t("preset_confirm_delete"))) return;
+  if (!name) return;
+  const ok = await openPromptModal({
+    title: t("preset_modal_delete_title"),
+    body: t("preset_modal_delete_body"),
+    confirmLabel: t("preset_delete"),
+    danger: true
+  });
+  if (!ok) return;
   delete presets[name];
   localStorage.setItem("presets", JSON.stringify(presets));
   sel.value = "";
@@ -1455,6 +1748,7 @@ function switchLanguage(lang) {
   currLang = lang;
   localStorage.setItem("lang", lang);
   document.querySelectorAll("[data-i18n]").forEach(el => {
+    if (el.childElementCount > 0) return; // skip parents; i18n should target each child
     const key = el.getAttribute("data-i18n");
     if (t(key) !== key) el.textContent = t(key);
   });
@@ -1464,14 +1758,22 @@ function switchLanguage(lang) {
   document.querySelectorAll("[data-i18n-value]").forEach(el => {
     el.value = t(el.getAttribute("data-i18n-value"));
   });
-  // Handle imgUploadLabel based on state
+  document.querySelectorAll("[data-i18n-title]").forEach(el => {
+    const key = el.getAttribute("data-i18n-title");
+    if (t(key) !== key) el.setAttribute("title", t(key));
+  });
   const hasImage = typeof imgB64 !== "undefined" && imgB64 !== null;
   const imgLabel = document.getElementById("imgUploadLabel");
-  if (imgLabel) {
-    imgLabel.textContent = hasImage ? t("upload_change") : t("upload_tap");
+  if (imgLabel) imgLabel.textContent = hasImage ? t("upload_change") : t("upload_tap");
+  const lToggle = document.getElementById("langToggle");
+  if (lToggle) lToggle.textContent = lang === "zh" ? "EN" : "中文";
+  const isOrig = document.body.classList.contains("theme-original");
+  const tLabel = document.getElementById("themeLabel");
+  if (tLabel) tLabel.textContent = isOrig ? t("theme_label_original") : t("theme_label_apple");
+  const genLabel = document.getElementById("genLabel");
+  if (genLabel && $("genBtn") && $("genBtn").getAttribute("aria-busy") !== "true") {
+    genLabel.textContent = t("generate");
   }
-  const toggle = document.getElementById("langToggle");
-  if (toggle) toggle.textContent = lang === "zh" ? "EN" : "中文";
 }
 
 // ─── AUTOMASK ────────────────────────────────────────────────────────────────
@@ -1597,14 +1899,10 @@ function openAutomaskModal() {
   const displaySize = Math.min(window.innerWidth, window.innerHeight - 180, 650);
   canvas.style.width = displaySize + "px";
   canvas.style.height = displaySize + "px";
-  $("automaskModal").classList.remove("hidden");
-  document.body.style.overflow = "hidden";
+  openModal($("automaskModal"));
 }
 
-function closeAutomaskModal() {
-  $("automaskModal").classList.add("hidden");
-  document.body.style.overflow = "";
-}
+function closeAutomaskModal() { closeModal($("automaskModal")); }
 
 function applyAutomask() {
   const sz = getTargetSize();
@@ -1701,17 +1999,32 @@ document.getElementById("langToggle").addEventListener("click", () => {
 const themeToggle = document.getElementById("themeToggle");
 const savedTheme = localStorage.getItem("theme");
 if (savedTheme === "original") document.body.classList.add("theme-original");
-themeToggle.textContent = document.body.classList.contains("theme-original") ? "🎨 Apple" : "🎨 Original";
+function refreshThemeUI() {
+  const isOrig = document.body.classList.contains("theme-original");
+  renderIcon(document.getElementById("themeIcon"), isOrig ? "moon" : "sun");
+  const lbl = document.getElementById("themeLabel");
+  if (lbl) lbl.textContent = isOrig ? t("theme_label_original") : t("theme_label_apple");
+}
+refreshThemeUI();
 themeToggle.addEventListener("click", () => {
   document.body.classList.toggle("theme-original");
   const isOrig = document.body.classList.contains("theme-original");
-  themeToggle.textContent = isOrig ? "🎨 Apple" : "🎨 Original";
   localStorage.setItem("theme", isOrig ? "original" : "apple");
+  refreshThemeUI();
 });
 
 // Initialize language
 switchLanguage(currLang);
 
 </script>
+
+<!-- 角落光斑（仅在 Original 深色主题可见） -->
+<div class="aurora-bg" aria-hidden="true">
+  <span class="aurora-blob aurora-blob-1"></span>
+  <span class="aurora-blob aurora-blob-2"></span>
+  <span class="aurora-blob aurora-blob-3"></span>
+  <span class="aurora-blob aurora-blob-4"></span>
+</div>
+
 </body>
 </html>

@@ -4,8 +4,13 @@ __pycache__/
 .env
 .venv/
 .codegraph/
+.superpowers/
 .DS_Store
+.worktrees/
 docs/
+
+# Runtime artifacts
+*.heapsnapshot
 
 # Beads / Dolt files (added by bd init)
 .dolt/

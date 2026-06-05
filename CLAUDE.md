@@ -4,13 +4,20 @@ A Flask web UI for the [Local Dream](https://github.com/xororz/local-dream) Andr
 
 ## Stack
 
-- **Backend**: Python 3.13, Flask, Pillow, requests
+- **Backend**: Python 3.10+, Flask, Pillow, requests
 - **Frontend**: Single-page vanilla HTML/CSS/JS (`templates/index.html`)
-- **Environment**: Termux on Android (no PC)
+- **Tests**: pytest (62 tests, `tests/`)
+- **Environment**: Termux on Android (no PC) — also works on desktop via uv
 
 ## Running
 
 ```bash
+# Desktop (with uv):
+uv sync
+uv run python app.py
+# Open http://127.0.0.1:5000
+
+# Termux (without uv):
 pip install flask requests pillow
 python app.py
 # Open http://127.0.0.1:5000
@@ -18,31 +25,55 @@ python app.py
 
 Local Dream must be open with a model loaded before the API is available at `http://127.0.0.1:8081`.
 
+For development with tests:
+
+```bash
+uv sync --group dev
+uv run pytest
+```
+
 ## Project Structure
 
 ```
-app.py                  # Flask server — proxy + raw RGB→PNG conversion + automask proxy
+app.py                  # Flask server — routes, resolve_ld_url, HFAutomask, LD_ALLOWED_HOSTS allowlist
+sse.py                  # SSE 解析 + 事件类型注册表 (EVENT_HANDLERS) + complete/progress handlers
 templates/index.html    # Entire frontend (single file)
-.env                    # Optional — set HF_TOKEN here (not committed)
+tests/                  # 62 pytest tests
+  test_sse.py           # parse_sse / complete_to_png_b64 / progress_handler / EVENT_HANDLERS
+  test_app.py           # resolve_ld_url + allowlist + HFAutomask
+  test_routes.py        # End-to-end route dispatch + perf benchmarks
+.env                    # Optional — HF_TOKEN and LD_ALLOWED_HOSTS (not committed)
 .shortcuts/Local Dream  # Termux widget shortcut — starts server and opens browser
 ```
 
 ## Architecture
 
-### Backend (`app.py`)
+### Backend
 
-Four routes:
+Four routes in `app.py`:
 
 - `GET /` — serves the UI
-- `GET /health` — checks if Local Dream is reachable on port 8081
+- `GET /health` — checks if Local Dream is reachable; URL via `?url=` (resolved by `resolve_ld_url`)
 - `POST /generate` — proxies the request to Local Dream, streams SSE back to browser
-- `POST /automask` — proxies image to HuggingFace segformer_b2_clothes, returns segment list
+- `POST /automask` — `HFAutomask` adapter calls HuggingFace segformer_b2_clothes, returns segment list
 
-`HF_TOKEN` is read from `.env` at startup if present; the UI can also pass it per-request.
+Shared helpers in `app.py`:
+- `resolve_ld_url(override)` — single URL-resolution entry; falls back to `DEFAULT_LD_URL` on empty/non-string; if `LD_ALLOWED_HOSTS` is set, also enforces netloc allowlist (silent fallback, no error to avoid probing).
+- `HFAutomask(token, timeout=60)` — wraps the HF Router call; `ENDPOINT` constant + `segment(png_bytes) -> dict`.
 
-The only server-side transformation on `/generate`: the Local Dream API returns raw RGB bytes (not PNG) in the `complete` event. Flask decodes these with Pillow and replaces `image` with `png_image` (base64 PNG) before forwarding to the browser.
+SSE plumbing lives in `sse.py`:
+- `parse_sse(lines) -> Iterator[Event]` — pure SSE line parser (W3C-compliant).
+- `EVENT_HANDLERS` — registry mapping event type to handler. Add a new event type by registering one entry.
+- `complete_to_png_b64` — converts raw RGB bytes in `complete` events to base64 PNG (replaces `image` with `png_image`).
+- `progress_handler` — defensively recognizes `step`+`total` / `step`+`max_steps` / `step`+`steps` / standalone `progress` (0-1 or 0-100) and adds a `percent` field; otherwise passes through unchanged.
+
+`HF_TOKEN` is read from `.env` at startup if present; the UI can also pass it per-request (body token wins, env fallback).
 
 Payload is passed through as-is. Only non-default optional params are sent (karras/use_opencl only if true, clip_skip only if >1, seed only if not random) to stay close to what the native app sends.
+
+### Trusted-backend allowlist (optional security)
+
+Set `LD_ALLOWED_HOSTS` in `.env` to a comma-separated list of `host:port` to refuse untrusted backends. Unlisted URLs silently fall back to default. Not set = no restriction.
 
 ### Frontend (`templates/index.html`)
 
@@ -80,7 +111,7 @@ Single-page app, no framework. Key sections:
 
 **Session persistence**: `imgB64`, `maskB64`, raw image src, `lastCropRegion`, and mask-enabled state are saved to `sessionStorage` after crop confirm and mask done. Restored on page reload (survives Flask restarts, cleared when tab closes).
 
-**SSE streaming**: Uses `fetch()` + `ReadableStream` reader. Chunks split on `\n\n`, events parsed manually. Progress bar driven by `step/total_steps` from API (display uses user-set steps to hide the API's 2 internal extra steps).
+**SSE streaming**: Uses `fetch()` + `ReadableStream` reader. Chunks split on `\n\n`, events parsed manually. Dispatch order: prefer the SSE `event:` field (from the backend `EVENT_HANDLERS` registry), fall back to JSON `data.type` for older Local Dream builds. Progress bar prefers backend's `data.percent` field; falls back to `step / total` (with `total` / `total_steps` / `max_steps` / `steps` all accepted). Display total uses the user's chosen steps to hide the API's 2 internal extra steps.
 
 **Details panel**: Shows Steps, CFG, Size, Seed, Mode, Scheduler, Time after generation.
 

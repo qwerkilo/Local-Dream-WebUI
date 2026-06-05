@@ -8,3 +8,15 @@ dependencies = [
     "requests",
     "pillow",
 ]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+markers = [
+    "performance: performance and benchmark tests (use `pytest -m 'not performance'` to skip)",
+]
