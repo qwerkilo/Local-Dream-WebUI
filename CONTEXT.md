@@ -67,3 +67,18 @@
 - **`sse.py` 解析器 + EVENT_HANDLERS 注册表** — 已深化。新增事件类型只需注册 handler。
 - **`resolve_ld_url`** — 已深化，含 `LD_ALLOWED_HOSTS` 白名单。
 - **`HFAutomask` 适配器** — 已抽取（候选 3）。新增模型只需改 `ENDPOINT` 常量。
+
+## 远端 Dolt 基础设施（不可手动改）
+
+项目把 Dolt 远端配置成 `git+https://github.com/qwerkilo/Local-Dream-WebUI`，因此 GitHub 远端仓会多出两个 Dolt 管理的 ref：
+
+- `refs/dolt/data` — Dolt 实际数据（issues / 历史 / metadata），由 `bd dolt push` 维护
+- `refs/heads/__dolt_remote_info__` — Dolt 标记分支（仅一个 `DOLT_REMOTE.md` 文件，告知 Dolt 客户端数据所在 ref）
+
+`__dolt_remote_info__` 分支对代码、CI、PR 零影响（独立分支、不被 checkout），但**不要手动删除**：
+
+- 删了下次 `bd dolt push` 会重建
+- 没它其他 Dolt 客户端会找不到 Dolt 数据位置
+- 这是 Dolt 用 git+https 作存储时的协议一部分
+
+如果 GitHub 上看到陌生分支，这是 Dolt 的标准行为，不是泄漏。`bd dolt push` / `bd dolt pull` 是与远端 Dolt 状态同步的正确方式。
