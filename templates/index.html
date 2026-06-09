@@ -625,7 +625,13 @@
   <div class="modal-body" id="promptBody"></div>
 </div>
 
-<script>
+<script type="module">
+// 从 static/params.js 导入参数表单与 payload 工厂。
+// ParamsForm：DOM 控件 ↔ 字段值接缝（read/apply/bind）。
+// ParamsPayload：纯函数工厂，把 raw snap 规整为 wire object（snake_case，省略空值/默认值）。
+// redactBinaries：调试 JSON redaction 辅助（image / mask 字段替换为 "(base64 omitted)"）。
+import { createParamsForm, createParamsPayload, redactBinaries } from "/static/params.js";
+
 const $ = id => document.getElementById(id);
 // === ICON SYSTEM (inline SVG, Lucide-style 1.75 stroke) ===
 const SVG_NS = "http://www.w3.org/2000/svg";
@@ -927,24 +933,6 @@ document.querySelectorAll(".sub-nav-tab").forEach(btn =>
     mode = btn.dataset.mode;
     $("img2imgSection").classList.toggle("collapsed", mode === "txt2img");
   })
-);
-
-// ─── Range displays ─────────────────────────────────────────────────────────
-[["steps","stepsVal"], ["cfg","cfgVal"], ["denoise","denoiseVal"], ["brushSize","brushVal"]]
-  .forEach(([id, valId]) => {
-    const el = $(id), vEl = $(valId);
-    if (!el || !vEl) return;
-    el.addEventListener("input", () => { vEl.textContent = el.value; });
-  });
-
-// ─── Size custom ─────────────────────────────────────────────────────────────
-$("size").addEventListener("change", () =>
-  $("sizeCustom").classList.toggle("collapsed", $("size").value !== "custom")
-);
-
-// ─── Seed random toggle ──────────────────────────────────────────────────────
-$("seedRandom").addEventListener("change", () =>
-  $("seed").classList.toggle("hidden", $("seedRandom").checked)
 );
 
 // ─── Mask toggle ─────────────────────────────────────────────────────────────
@@ -1368,47 +1356,47 @@ function updateMaskThumb() {
   img.src = "data:image/png;base64," + maskB64;
 }
 
-// ─── Auto-expand textareas ────────────────────────────────────────────────────
-document.querySelectorAll("textarea").forEach(ta => {
-  const resize = () => { ta.style.height = "auto"; ta.style.height = ta.scrollHeight + "px"; };
-  ta.addEventListener("input", resize);
-  resize();
-});
+// ─── ParamsForm / ParamsPayload 实例化 ────────────────────────────────────────
+// 启动时一次性装联动事件（slider 显示标签、size custom 可见性、seedRandom 可见性、
+// textarea auto-resize）由 ParamsForm.bind() 内部完成，调用方不再重复装。
+const ParamsForm = createParamsForm({ $ });
+const ParamsPayload = createParamsPayload();
+ParamsForm.bind();
+
+// 启动后给 textarea 补一次 resize()（ParamsForm.bind 不主动调初始 resize，
+// 避免 bind() 职责膨胀；调用方一次性 dispatch input 触发即可）。
+for (const id of ["prompt", "negPrompt"]) {
+  const ta = $(id);
+  if (ta) ta.dispatchEvent(new Event("input"));
+}
 
 // ─── Build payload ────────────────────────────────────────────────────────────
-function buildPayload(omitImages = false) {
-  const sizeEl = $("size");
-  const sizeVal = sizeEl.value === "custom" ? parseInt($("sizeCustom").value) : parseInt(sizeEl.value);
-  const p = {
-    prompt: $("prompt").value.trim(),
-    negative_prompt: $("negPrompt").value,
-    size: sizeVal,
-    steps: parseInt($("steps").value),
-    cfg: parseFloat($("cfg").value),
-  };
-  if (!$("seedRandom").checked) p.seed = parseInt($("seed").value);
-  if ($("ldToggle").checked) {
-    const ldUrl = $("ldUrl").value.trim();
-    if (ldUrl) p.local_dream_url = ldUrl.startsWith("http") ? ldUrl : "http://" + ldUrl;
-  }
-  const sched = $("scheduler").value;
-  if (sched) p.scheduler = sched;
-  if ($("karras").checked) p.karras = true;
-  if ($("useOpenCL").checked) p.use_opencl = true;
-  const clipSkip = parseInt($("clipSkip").value);
-  if (clipSkip > 1) p.clip_skip = clipSkip;
-  if (mode === "img2img") {
-    p.image = omitImages ? "(base64 omitted)" : imgB64;
-    p.denoise_strength = parseFloat($("denoise").value);
-    if ($("maskEnabled").checked && maskB64) {
-      p.mask = omitImages ? "(base64 omitted)" : maskB64;
-    }
-  }
-  return p;
-}
+// 旧 buildPayload(omitImages) 函数已删除；参数由 ParamsPayload.fromForm(snap)
+// 生成。debug JSON 路径仍保留 omitImages 参数用于把 image / mask 替换成
+// "(base64 omitted)" 占位字符串；生产路径用 buildWirePayload(false)。
+// img2img 专属字段（image / mask / denoise_strength）由 buildWirePayload 手动
+// 注入到 wire；mode 是 UI 状态不进 wire（renderDetails 直接读模块级变量）。
 
 // ─── Generate ────────────────────────────────────────────────────────────────
 $("genBtn").addEventListener("click", generate);
+
+// 把表单 snap + 图像状态 / mode 合并成 wire payload（生成 /generate 请求体用）。
+//   - image / mask 在 img2img 模式下注入；txt2img 模式下不出现。
+//   - denoise_strength 仅在 img2img 模式下注入。
+//   - mode 由调用方决定（"txt2img" / "img2img"），不进 ParamsForm。
+// omitImages=true 用于调试 JSON 展示：把 image / mask 替换为 "(base64 omitted)"。
+function buildWirePayload(omitImages = false) {
+  const snap = ParamsForm.read();
+  const wire = ParamsPayload.fromForm(snap);
+  if (mode === "img2img") {
+    wire.image = omitImages ? "(base64 omitted)" : imgB64;
+    wire.denoise_strength = parseFloat($("denoise").value);
+    if ($("maskEnabled").checked && maskB64) {
+      wire.mask = omitImages ? "(base64 omitted)" : maskB64;
+    }
+  }
+  return wire;
+}
 
 function generate() {
   const prompt = $("prompt").value.trim();
@@ -1416,8 +1404,15 @@ function generate() {
   if (mode === "img2img" && !imgB64) { showError(t("error_no_image")); return; }
 
   hideError();
-  const payload = buildPayload(false);
-  lastPayload = buildPayload(false); // keep for details panel
+  const payload = buildWirePayload(false);
+  // lastPayload 用于 details panel / compositeInpaint：保留 wire 形态
+  // （prompt / size / steps / cfg / denoise_strength 等），同时把图像字段
+  // 提至顶层供 renderDetails 和 img2img compositeInpaint 直接读。
+  lastPayload = {
+    ...payload,
+    image: imgB64,
+    mask: $("maskEnabled").checked ? maskB64 : null,
+  };
 
   $("genBtn").disabled = true;
   $("genBtn").setAttribute("aria-busy", "true");
@@ -1603,7 +1598,7 @@ function hideError() { $("errorMsg").classList.remove("shown"); }
 $("debugBtn").addEventListener("click", () => {
   const box = $("debugBox");
   if (box.style.display !== "none") { box.style.display = "none"; $("debugBtn").textContent = t("show_json"); return; }
-  box.textContent = JSON.stringify(buildPayload(true), null, 2);
+  box.textContent = redactBinaries(buildWirePayload(true));
   box.style.display = "block";
   $("debugBtn").textContent = t("hide_json");
 });
@@ -1663,13 +1658,22 @@ ldToggle.addEventListener("change", () => {
 });
 
 // ─── Presets ─────────────────────────────────────────────────────────────────
-const PRESET_KEYS = ["prompt","negPrompt","size","steps","scheduler","cfg","karras"];
+// 旧 preset（改 refactor 前）保存的 size 是 select 字符串（"512" / "custom"）；
+// 新 preset 存的是 parseInt 后的整数（512 / 768 或 800 表示走 custom 路径）。
+// loadPresets 时一次性 sanitize：把字符串 size 转整数，让 ParamsForm.apply 的
+// ALLOWED_SIZES 判定正常工作。
+function sanitizePreset(p) {
+  if (!p || typeof p !== "object") return p;
+  if (typeof p.size === "string") p.size = parseInt(p.size) || 512;
+  return p;
+}
 
 function loadPresets() {
   const presets = JSON.parse(localStorage.getItem("presets") || "{}");
   const sel = $("presetSelect");
   sel.innerHTML = '<option value="" data-i18n="preset_default">Default</option>';
   for (const name of Object.keys(presets).sort()) {
+    sanitizePreset(presets[name]);
     const opt = document.createElement("option");
     opt.value = name; opt.textContent = name;
     sel.appendChild(opt);
@@ -1677,22 +1681,21 @@ function loadPresets() {
   return presets;
 }
 
+// 从 presets map 中取出 snap 写回表单。ParamsForm.apply 内部已经 dispatch
+// 联动事件（size → change、slider/textarea → input），旧代码里手工 dispatch 的
+// 步骤全部由它负责。
+// denoise 字段不在 ParamsForm 里（旧 wire 不存；新 PRESET_FIELDS 把 denoise_strength
+// 加进了白名单），所以加载 preset 时手动写回 denoise 滑块并 dispatch input 触发
+// denoiseVal 标签刷新。
 function applyPreset(name, presets) {
-  const p = presets[name];
-  if (!p) return;
-  $("prompt").value = p.prompt || "";
-  $("negPrompt").value = p.neg_prompt || "";
-  $("size").value = p.size || "512";
-  $("size").dispatchEvent(new Event("change"));
-  $("steps").value = p.steps || 20;
-  $("stepsVal").textContent = $("steps").value;
-  $("cfg").value = p.cfg || 7;
-  $("cfgVal").textContent = $("cfg").value;
-  $("scheduler").value = p.scheduler || "";
-  $("karras").checked = !!p.karras;
-  // Auto-expand textarea
-  $("prompt").dispatchEvent(new Event("input"));
-  $("negPrompt").dispatchEvent(new Event("input"));
+  const snap = presets[name];
+  if (!snap) return;
+  ParamsForm.apply(snap);
+  const denoise = $("denoise");
+  if (denoise && snap.denoise_strength != null) {
+    denoise.value = String(snap.denoise_strength);
+    denoise.dispatchEvent(new Event("input"));
+  }
 }
 
 let presets = loadPresets();
@@ -1709,15 +1712,15 @@ $("presetSave").addEventListener("click", async () => {
     confirmLabel: t("preset_save")
   });
   if (!name) return;
-  presets[name] = {
-    prompt: $("prompt").value,
-    neg_prompt: $("negPrompt").value,
-    size: $("size").value,
-    steps: $("steps").value,
-    scheduler: $("scheduler").value,
-    cfg: $("cfg").value,
-    karras: $("karras").checked,
-  };
+  // preset wire 形态：snake_case（与 /generate body 对齐），
+  // 通过 ParamsPayload.fromForm(..., { presetMode: true }) 输出 PRESET_FIELDS 白名单字段。
+  // mode / denoise_strength 显式注入到 snap（不进 ParamsForm）。
+  const snap = ParamsForm.read();
+  const presetWire = ParamsPayload.fromForm(
+    { ...snap, mode, denoise_strength: parseFloat($("denoise").value) },
+    { presetMode: true }
+  );
+  presets[name] = presetWire;
   localStorage.setItem("presets", JSON.stringify(presets));
   const sel = $("presetSelect");
   const opt = document.createElement("option");
