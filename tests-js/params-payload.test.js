@@ -286,6 +286,28 @@ describe("createParamsPayload.fromForm - presetMode 白名单", () => {
     expect(wire.denoise_strength).toBe(0.75);
     expect(wire.mode).toBe("img2img");
   });
+
+  // 问题 #6：denoise_strength / mode 必须走 rule 通道（postProcess），
+  // 不能因为 DEFAULT_RULES 没键就兜底透传。
+  test("presetMode + denoise_strength 字符串 '0.5' → 输出 0.5（parseFloat 生效）", () => {
+    const payload = createParamsPayload();
+    const wire = payload.fromForm({
+      prompt: "x", negative_prompt: "", size: 512, steps: 1, cfg: 1,
+      scheduler: "", karras: false, use_opencl: false, clip_skip: 1, seed: null, local_dream_url: "",
+      denoise_strength: "0.5", mode: "img2img",
+    }, { presetMode: true });
+    expect(wire.denoise_strength).toBe(0.5);
+  });
+
+  test("presetMode + mode 数字 42 → 输出字符串 '42'（String 转换生效）", () => {
+    const payload = createParamsPayload();
+    const wire = payload.fromForm({
+      prompt: "x", negative_prompt: "", size: 512, steps: 1, cfg: 1,
+      scheduler: "", karras: false, use_opencl: false, clip_skip: 1, seed: null, local_dream_url: "",
+      denoise_strength: 0.5, mode: 42,
+    }, { presetMode: true });
+    expect(wire.mode).toBe("42");
+  });
 });
 
 describe("createParamsPayload - 纯函数性", () => {

@@ -117,6 +117,18 @@ describe("createParamsForm - read", () => {
     expect(form.read().seed).toBe(42);
   });
 
+  // 问题 #5：seed read 在 seedRandom unchecked + 空字符串输入时应返 null，
+  // 不能让 NaN 漏到 wire payload（omitIf 不拦 NaN）。
+  test("seed read: 空字符串 + seedRandom unchecked → null（不是 NaN）", () => {
+    const mocks = makeMocks({
+      seedRandom: { checked: false, addEventListener: () => {}, dispatchEvent: () => {} },
+      seed: { value: "", addEventListener: () => {}, dispatchEvent: () => {} },
+    });
+    const form = createParamsForm({ $: (id) => mocks[id] });
+
+    expect(form.read().seed).toBeNull();
+  });
+
   test("checkbox 字段 (karras/use_opencl) read 返 boolean", () => {
     const mocks = makeMocks({
       karras: { checked: true, addEventListener: () => {}, dispatchEvent: () => {} },
@@ -233,6 +245,21 @@ describe("createParamsForm - apply", () => {
     const form = createParamsForm({ $: (id) => mocks[id] });
 
     form.apply({ size: 512, prompt: "", negative_prompt: "", steps: 1, cfg: 1, scheduler: "euler", karras: false, use_opencl: false, clip_skip: 1, seed: null, local_dream_url: "" });
+
+    expect(dispatches).toContain("change");
+  });
+
+  // 问题 #2：apply 写 seed 字段时，seedRandom 控件必须收到 change 事件，
+  // 这样 bind() 装的"seedRandom change → seed 可见性"监听器会触发联动。
+  test("apply seed 字段时,seedRandom 控件收到 change 事件（可见性切换联动）", () => {
+    const dispatches = [];
+    const mocks = makeMocks();
+    mocks.seedRandom.dispatchEvent = (ev) => dispatches.push(ev.type);
+    const form = createParamsForm({ $: (id) => mocks[id] });
+
+    // 模拟从 null 切到具体数值（或反向）：apply 写 seed 后
+    // 应触发 seedRandom 的 change 事件，bind 阶段装的监听器据此切可见性。
+    form.apply({ size: 512, prompt: "", negative_prompt: "", steps: 1, cfg: 1, scheduler: "", karras: false, use_opencl: false, clip_skip: 1, seed: 42, local_dream_url: "" });
 
     expect(dispatches).toContain("change");
   });

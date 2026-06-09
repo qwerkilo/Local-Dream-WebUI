@@ -80,6 +80,17 @@ const DEFAULT_RULES = {
     omitIf: (v) => v == null,
     postProcess: (v) => v,
   },
+  // denoise_strength / mode 仅在 presetMode 路径走 rule（默认模式不输出这两个字段）。
+  // preset 里需要保"txt2img vs img2img"和强度偏好；给它们补 rule 后，
+  // 兜底分支 `out[key] = snap[key]` 不会再发生，类型也由 postProcess 规整。
+  denoise_strength: {
+    omitIf: () => false,
+    postProcess: (v) => parseFloat(v),
+  },
+  mode: {
+    omitIf: () => false,
+    postProcess: (v) => String(v),
+  },
   local_dream_url: {
     omitIf: (v) => !v || !String(v).trim(),
     postProcess: (v) => {
@@ -127,8 +138,7 @@ export function createParamsForm({ $ }) {
           $("size").value = "custom";
           $("sizeCustom").value = String(v);
         }
-        // size 有联动（sizeCustom 可见性切换），必须显式派 change
-        $("size").dispatchEvent(new Event("change"));
+        // 联动（sizeCustom 可见性）由 apply 公共循环派 change 触发（APPLY_EVENT_TYPE.size === "change"）
       },
     },
     steps: {
@@ -163,11 +173,21 @@ export function createParamsForm({ $ }) {
     },
     seed: {
       id: "seed",
-      // seedRandom.checked → null（不固定种子）；否则读 seed 值
-      read: () => ($("seedRandom").checked ? null : parseInt($("seed").value)),
+      // seedRandom.checked → null（不固定种子）；否则读 seed 值。
+      // 空字符串 → NaN，必须归一化为 null，让 omitIf 能正确省略
+      // （NaN == null 是 false，会漏过 omitIf 把 NaN 送进 wire）。
+      read: () => {
+        if ($("seedRandom").checked) return null;
+        const n = parseInt($("seed").value);
+        return Number.isNaN(n) ? null : n;
+      },
       write: (v) => {
         $("seedRandom").checked = v == null;
         if (v != null) $("seed").value = String(v);
+        // 联动：seedRandom change 触发 bind() 装的"seed 可见性切换"监听器。
+        // apply 公共循环对 seed 字段派的是 input 到 #seed 控件，
+        // 不会触发 seedRandom 的 change，所以这里显式补一发。
+        $("seedRandom").dispatchEvent(new Event("change"));
       },
     },
     local_dream_url: {
@@ -178,11 +198,14 @@ export function createParamsForm({ $ }) {
   };
 
   // 控件 → 事件类型映射（用于 apply 后的联动 dispatch）。
+  // 键是字段 f.id：size / scheduler / ldUrl 是 <select> 派 change；
+  // 其他字段（textarea/checkbox/input）默认派 input。
+  // seed 字段不在这张表里：它的 write 内部已显式派 change 给 seedRandom 控件
+  // （让 bind 装的"seed 可见性切换"联动触发），避免污染这张表。
   const APPLY_EVENT_TYPE = {
     size: "change",
     scheduler: "change",
     ldUrl: "change",
-    seedRandom: "change",
   };
 
   return {
