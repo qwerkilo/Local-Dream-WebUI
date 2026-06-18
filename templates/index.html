@@ -2749,38 +2749,27 @@ let originalImgB64 = null; // original uploaded/source image base64 (unpadded, u
           lastOutputB64 = data.png_image;
           lastCompleteData = data;
           lastFullComposite = null;
-          // 裁剪后合成回全图（参考 LD: 从原始图解码，在 crop rect 位置叠加生成图）
           if (mode === "img2img" && lastCropRegion) {
+            const mask = lastPayload && lastPayload.mask;
             if (img2imgPaddingOffset) {
-              // 填充案例：在 1024×1024 padded 画布上叠放生成图
+              // 填充案例：LD 输出已在原始尺寸，直接作为全图
               setOutput("data:image/png;base64," + data.png_image);
-              const { x: ox, y: oy, origW, origH } = img2imgPaddingOffset;
-              const sz = 1024;
-              const off = document.createElement("canvas");
-              off.width = sz; off.height = sz;
-              const ctx = off.getContext("2d");
-              ctx.drawImage(rawUploadedImg, 0, 0, sz, sz);
-              const tmp = new Image();
-              tmp.onload = () => {
-                ctx.drawImage(tmp, ox, oy, origW, origH);
-                showDlFull(off.toDataURL("image/png"));
-              };
-              tmp.src = "data:image/png;base64," + data.png_image;
-            } else {
-              // 普通裁剪：合成回原始全图
-              const mask = lastPayload && lastPayload.mask;
-              // 先获得补丁图（合成版或生成图）
-              const patchSrc = !mask ? "data:image/png;base64," + data.png_image : null;
               if (mask) {
                 compositeInpaint(lastPayload.image, data.png_image, mask).then((src) => {
                   setOutput(src);
                   lastOutputB64 = src.split(",")[1];
-                  stitchFullToOriginal(src);
                 });
-              } else {
-                setOutput("data:image/png;base64," + data.png_image);
-                stitchFullToOriginal("data:image/png;base64," + data.png_image);
               }
+              showDlFull("data:image/png;base64," + data.png_image);
+            } else if (mask) {
+              compositeInpaint(lastPayload.image, data.png_image, mask).then((src) => {
+                setOutput(src);
+                lastOutputB64 = src.split(",")[1];
+                stitchFullToOriginal(src);
+              });
+            } else {
+              setOutput("data:image/png;base64," + data.png_image);
+              stitchFullToOriginal("data:image/png;base64," + data.png_image);
             }
           } else {
             setOutput("data:image/png;base64," + data.png_image);
