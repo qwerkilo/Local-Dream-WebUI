@@ -1057,6 +1057,7 @@
           txt2img
         </button>
         <button class="sub-nav-tab" data-mode="img2img" data-i18n="tab_img2img">img2img</button>
+        <button class="sub-nav-tab" data-mode="upscale" data-i18n="tab_upscale">Upscale</button>
         <span class="sub-nav-spacer"></span>
         <button
           class="sub-nav-cta"
@@ -1275,6 +1276,37 @@ worst quality, low quality, normal quality, poorly drawn, lowres, low resolution
           </div>
         </div>
 
+      <!-- Upscale standalone mode -->
+      <div id="upscaleSection" class="hidden" style="margin-top: 16px">
+        <div class="card">
+          <div class="card-title" data-i18n="tab_upscale">Upscale Image</div>
+          <div class="section">
+            <label data-i18n="label_input_image">Input image</label>
+            <label class="upload-label" for="upscaleFile">
+              <input type="file" id="upscaleFile" accept="image/*" />
+              <span id="upscaleUploadLabel" data-i18n="tap_to_upload">Tap to upload image</span>
+            </label>
+            <img id="upscalePreview" class="img-preview hidden" alt="preview" />
+          </div>
+          <div class="section">
+            <label data-i18n="label_upscaler_model">Upscaler Model</label>
+            <select id="upscaleModelSelect">
+              <option value="realesrgan_anime">Real-ESRGAN Anime</option>
+              <option value="realesrgan_realistic">UltraSharp Realistic</option>
+            </select>
+          </div>
+          <div style="display: flex; gap: 8px; margin-top: 8px">
+            <button class="gen-btn upscale-run" id="upscaleRunBtn" data-i18n="upscale">Upscale ×4</button>
+          </div>
+          <div id="upscaleResult" class="hidden" style="margin-top: 12px">
+            <img id="upscaleResultImg" alt="upscaled" style="max-width: 100%; border-radius: 6px" />
+            <div style="display: flex; gap: 8px; margin-top: 8px">
+              <a class="dl-btn" id="upscaleDlBtn" download="upscaled.jpg" data-i18n="download">Download</a>
+            </div>
+          </div>
+        </div>
+      </div>
+
         <!-- 折叠的进阶选项 -->
         <details style="margin-top: 8px">
           <summary
@@ -1348,6 +1380,7 @@ worst quality, low quality, normal quality, poorly drawn, lowres, low resolution
           </div>
           <div style="display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap">
             <a class="dl-btn" id="dlBtn" download="dream.png" data-i18n="download">Download</a>
+            <a class="dl-btn hidden" id="dlFullBtn" download="dream_full.png" data-i18n="download_full">Download Full</a>
             <button class="dl-btn" id="upscaleBtn" data-i18n="upscale">Upscale ×4</button>
             <button class="dl-btn" id="img2imgBtn" data-i18n="send_to_img2img">Use in img2img</button>
           </div>
@@ -1626,6 +1659,7 @@ worst quality, low quality, normal quality, poorly drawn, lowres, low resolution
       i18n.en = {
         tab_txt2img: "txt2img",
         tab_img2img: "img2img",
+        tab_upscale: "Upscale",
         label_prompt: "Prompt",
         label_neg_prompt: "Negative Prompt",
         label_input_image: "Input image",
@@ -1718,6 +1752,8 @@ worst quality, low quality, normal quality, poorly drawn, lowres, low resolution
   error_upscale: "Upscale failed",
   upscale_time: "Upscaled in",
   send_to_img2img: "Use in img2img",
+  download_full: "Download Full",
+  tap_to_upload: "Tap to upload image",
         theme_label_apple: "Apple",
         theme_label_original: "Original",
         theme_toggle_title: "切换主题",
@@ -1732,6 +1768,7 @@ worst quality, low quality, normal quality, poorly drawn, lowres, low resolution
       i18n.zh = {
         tab_txt2img: "文生图",
         tab_img2img: "图生图",
+        tab_upscale: "放大",
         label_prompt: "提示词",
         label_neg_prompt: "负面提示词",
         label_input_image: "输入图片",
@@ -1824,6 +1861,8 @@ worst quality, low quality, normal quality, poorly drawn, lowres, low resolution
   error_upscale: "放大失败",
   upscale_time: "放大用时",
   send_to_img2img: "发送到图生图",
+  download_full: "下载全图",
+  tap_to_upload: "点击上传图片",
         theme_label_apple: "Apple",
         theme_label_original: "Original",
         theme_toggle_title: "Toggle theme",
@@ -1902,9 +1941,10 @@ worst quality, low quality, normal quality, poorly drawn, lowres, low resolution
           document.querySelectorAll(".sub-nav-tab").forEach((t) => t.classList.remove("active"));
           btn.classList.add("active");
           mode = btn.dataset.mode;
-          $("img2imgSection").classList.toggle("collapsed", mode === "txt2img");
-          if (mode !== "txt2img") $("img2imgSection").classList.remove("hidden");
-          // 切到 txt2img 时清理旧 img2img 数据，防止遮罩/图片残留影响生成
+          $("img2imgSection").classList.toggle("collapsed", mode !== "img2img");
+          if (mode !== "img2img") $("img2imgSection").classList.add("hidden");
+          if (mode === "img2img") $("img2imgSection").classList.remove("hidden");
+          $("upscaleSection").classList.toggle("hidden", mode !== "upscale");
           if (mode === "txt2img") {
             imgB64 = null;
             maskB64 = null;
@@ -2441,21 +2481,73 @@ const UPSCALER_PRESETS = {
   },
 };
 
-// Restore saved selection
-const upscalerSelect = $("upscalerSelect");
+// Restore saved selection for both selects
+function syncUpscalerSelects(val) {
+  $("upscalerSelect").value = val;
+  $("upscaleModelSelect").value = val;
+}
 const savedUpscaler = localStorage.getItem("upscalerPreset");
 if (savedUpscaler && UPSCALER_PRESETS[savedUpscaler]) {
-  upscalerSelect.value = savedUpscaler;
+  syncUpscalerSelects(savedUpscaler);
 }
+const upscalerSelect = $("upscalerSelect");
 upscalerSelect.addEventListener("change", () => {
   localStorage.setItem("upscalerPreset", upscalerSelect.value);
+  $("upscaleModelSelect").value = upscalerSelect.value;
+});
+$("upscaleModelSelect").addEventListener("change", () => {
+  localStorage.setItem("upscalerPreset", $("upscaleModelSelect").value);
+  $("upscalerSelect").value = $("upscaleModelSelect").value;
+});
+
+// ─── Standalone upscale ────────────────────────────────────────────────────
+let upscaleFileB64 = null;
+$("upscaleFile").addEventListener("change", (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    upscaleFileB64 = ev.target.result.split(",")[1];
+    $("upscalePreview").src = ev.target.result;
+    $("upscalePreview").classList.remove("hidden");
+    $("upscaleUploadLabel").textContent = t("upload_change") || "Change";
+    $("upscaleResult").classList.add("hidden");
+  };
+  reader.readAsDataURL(file);
+});
+$("upscaleRunBtn").addEventListener("click", async () => {
+  if (!upscaleFileB64) { showError(t("error_no_image") || "No image"); return; }
+  // Get image dimensions from preview
+  const img = $("upscalePreview");
+  const w = img.naturalWidth, h = img.naturalHeight;
+  if (!w || !h) return;
+  const presetId = $("upscaleModelSelect").value;
+  const preset = UPSCALER_PRESETS[presetId];
+  if (!preset) { showError(t("error_upscaler_path")); return; }
+  const btn = $("upscaleRunBtn");
+  btn.disabled = true;
+  btn.textContent = t("upscaling") || "Upscaling…";
+  try {
+    const payload = { image: upscaleFileB64, width: w, height: h, upscaler_path: preset.path, use_opencl: false };
+    const ldUrl = $("ldUrl"), ldToggle = $("ldToggle");
+    if (ldToggle && ldToggle.checked && ldUrl && ldUrl.value.trim()) payload.local_dream_url = ldUrl.value.trim();
+    const res = await fetch("/upscale", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+    if (!res.ok) throw new Error((await res.json().catch(() => ({ error: res.statusText }))).error || res.statusText);
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    $("upscaleResultImg").src = url;
+    $("upscaleDlBtn").href = url;
+    $("upscaleResult").classList.remove("hidden");
+  } catch (e) { showError(t("error_upscale") + ": " + e.message); }
+  finally { btn.disabled = false; btn.textContent = t("upscale") || "Upscale ×4"; }
 });
 
 // Track last output for upscale
-      let lastOutputB64 = null;
-      let lastOutputWidth = 0;
-      let lastOutputHeight = 0;
-      let lastCompleteData = null;
+let lastOutputB64 = null;
+let lastOutputWidth = 0;
+let lastOutputHeight = 0;
+let lastCompleteData = null;
+let lastFullComposite = null;
       // sendToImg2img 填充非方形图到正方形时记录偏移量，供 compositeInpaint 定位
       let img2imgPaddingOffset = null;
 
@@ -2652,11 +2744,14 @@ upscalerSelect.addEventListener("change", () => {
           };
           lastOutputB64 = data.png_image;
           lastCompleteData = data;
+          lastFullComposite = null;
           if (mode === "img2img" && lastPayload && lastPayload.mask && lastPayload.image && !img2imgPaddingOffset) {
             compositeInpaint(lastPayload.image, data.png_image, lastPayload.mask).then((src) => {
               setOutput(src);
-              // composite 后从 data URL 提取 base64
               lastOutputB64 = src.split(",")[1];
+              lastFullComposite = src;
+              $("dlFullBtn").classList.remove("hidden");
+              $("dlFullBtn").href = src;
             });
           } else {
             setOutput("data:image/png;base64," + data.png_image);
