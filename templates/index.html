@@ -2552,6 +2552,7 @@ let lastOutputHeight = 0;
 let lastCompleteData = null;
 let lastFullComposite = null;
 let originalImgB64 = null; // original uploaded/source image base64 (unpadded, uncropped)
+let origImgWidth = 0, origImgHeight = 0;
       // sendToImg2img 填充非方形图到正方形时记录偏移量，供 compositeInpaint 定位
       let img2imgPaddingOffset = null;
 
@@ -2752,7 +2753,7 @@ let originalImgB64 = null; // original uploaded/source image base64 (unpadded, u
           if (mode === "img2img" && lastCropRegion) {
             const mask = lastPayload && lastPayload.mask;
             if (img2imgPaddingOffset) {
-              // 填充案例：在 1024×1024 padded canvas 上叠放生成图
+              // 填充案例：以 originalImgB64（原图）为底，在裁剪区域位置缩放叠放生成图
               setOutput("data:image/png;base64," + data.png_image);
               if (mask) {
                 compositeInpaint(lastPayload.image, data.png_image, mask).then((src) => {
@@ -2760,8 +2761,7 @@ let originalImgB64 = null; // original uploaded/source image base64 (unpadded, u
                   lastOutputB64 = src.split(",")[1];
                 });
               }
-              // 用 rawUploadedImg（1024×1024 padded）做全图
-              stitchFullPaddedRaw(data.png_image);
+              stitchFullToOriginal("data:image/png;base64," + data.png_image);
             } else if (mask) {
               compositeInpaint(lastPayload.image, data.png_image, mask).then((src) => {
                 setOutput(src);
@@ -2803,19 +2803,37 @@ let originalImgB64 = null; // original uploaded/source image base64 (unpadded, u
             base.onload = tryShow; base.src = "data:image/png;base64," + originalImgB64;
             patch.onload = tryShow; patch.src = patchSrc;
           }
-          function stitchFullPaddedRaw(genB64) {
-            // 以 1024×1024 padded 画布为底，叠放生成图 → 完整的方形全图（含黑边）
-            const { x: ox, y: oy, origW, origH } = img2imgPaddingOffset;
+          function stitchFullToOriginal(genB64) {
+            // 以 originalImgB64（发送到图生图时的原图）为底，在裁剪区域位置缩放叠放生成图
+            if (!originalImgB64 || !lastCropRegion) return;
+            const { cropX, cropY, cropScale, targetSize } = lastCropRegion;
+            const ox = img2imgPaddingOffset ? img2imgPaddingOffset.x : 0;
+            const oy = img2imgPaddingOffset ? img2imgPaddingOffset.y : 0;
+            const cropLeft = (-cropX / cropScale) - ox;
+            const cropTop = (-cropY / cropScale) - oy;
+            const cropW = targetSize / cropScale;
+            const cropH = targetSize / cropScale;
+            const base = new Image();
             const gen = new Image();
-            gen.onload = () => {
+            let loaded = 0;
+            const tryShow = () => {
+              loaded++;
+              if (loaded < 2) return;
+              const ow = base.naturalWidth, oh = base.naturalHeight;
               const off = document.createElement("canvas");
-              off.width = 1024; off.height = 1024;
+              off.width = ow; off.height = oh;
               const ctx = off.getContext("2d");
-              ctx.drawImage(rawUploadedImg, 0, 0, 1024, 1024);
-              ctx.drawImage(gen, ox, oy, origW, origH);
+              ctx.drawImage(base, 0, 0);
+              const gw = gen.naturalWidth, gh = gen.naturalHeight;
+              if (gw === ow && gh === oh) {
+                ctx.drawImage(gen, 0, 0);
+              } else {
+                ctx.drawImage(gen, cropLeft, cropTop, cropW, cropH);
+              }
               showDlFull(off.toDataURL("image/png"));
             };
-            gen.src = "data:image/png;base64," + genB64;
+            base.onload = tryShow; base.src = "data:image/png;base64," + originalImgB64;
+            gen.onload = tryShow; gen.src = genB64;
           }
           // 重置 upscale 按钮状态
           $("upscaleBtn").disabled = false;
@@ -2977,6 +2995,9 @@ let originalImgB64 = null; // original uploaded/source image base64 (unpadded, u
 
         // 保存原始图（ unpadded ）供 Download Full 使用
         originalImgB64 = b64;
+        // 保存原图 unpadded 尺寸供裁剪坐标映射用
+        origImgWidth = iw;
+        origImgHeight = ih;
 
         // 记录填充偏移量（含原始尺寸）
         if (isNonSquare) {
