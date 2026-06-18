@@ -2436,13 +2436,25 @@ worst quality, low quality, normal quality, poorly drawn, lowres, low resolution
         const ctx = overlay.getContext("2d");
         const img = new Image();
         img.onload = () => {
-          // overlay canvas 尺寸必须匹配 imgPreview 的实际显示尺寸
-          // imgPreview.src = imgB64（padded 或 unpadded），所以用 imgB64 的尺寸
-          overlay.width = img.naturalWidth;
-          overlay.height = img.naturalHeight;
-          ctx.clearRect(0, 0, img.naturalWidth, img.naturalHeight);
-          ctx.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight);
-          const d = ctx.getImageData(0, 0, img.naturalWidth, img.naturalHeight);
+          // overlay canvas 必须匹配 imgPreview 当前显示的图片尺寸
+          // sendToImg2img 后 imgPreview.src = 上一次生成图（unpadded 576x1024）
+          // 但 maskB64 是 padded 1024x1024 上画的
+          const preview = $("imgPreview");
+          const pw = preview.naturalWidth || img.naturalWidth;
+          const ph = preview.naturalHeight || img.naturalHeight;
+          overlay.width = pw;
+          overlay.height = ph;
+          ctx.clearRect(0, 0, pw, ph);
+          if (img.naturalWidth === pw && img.naturalHeight === ph) {
+            // 尺寸一致：直接绘制
+            ctx.drawImage(img, 0, 0, pw, ph);
+          } else {
+            // 尺寸不一致：从 padded mask 中裁出对应区域
+            const ox = img2imgPaddingOffset ? img2imgPaddingOffset.x : 0;
+            const oy = img2imgPaddingOffset ? img2imgPaddingOffset.y : 0;
+            ctx.drawImage(img, ox, oy, pw, ph, 0, 0, pw, ph);
+          }
+          const d = ctx.getImageData(0, 0, pw, ph);
           for (let i = 0; i < d.data.length; i += 4) {
             if (d.data[i] > 128) {
               d.data[i] = 124;
