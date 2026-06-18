@@ -2436,22 +2436,13 @@ worst quality, low quality, normal quality, poorly drawn, lowres, low resolution
         const ctx = overlay.getContext("2d");
         const img = new Image();
         img.onload = () => {
-          let mw, mh;
-          if (img2imgPaddingOffset) {
-            const { x: ox, y: oy, origW, origH } = img2imgPaddingOffset;
-            overlay.width = origW;
-            overlay.height = origH;
-            ctx.clearRect(0, 0, origW, origH);
-            ctx.drawImage(img, ox, oy, origW, origH, 0, 0, origW, origH);
-          } else {
-            mw = img.naturalWidth;
-            mh = img.naturalHeight;
-            overlay.width = mw;
-            overlay.height = mh;
-            ctx.clearRect(0, 0, mw, mh);
-            ctx.drawImage(img, 0, 0, mw, mh);
-          }
-          const d = ctx.getImageData(0, 0, overlay.width, overlay.height);
+          // overlay canvas 尺寸必须匹配 imgPreview 的实际显示尺寸
+          // imgPreview.src = imgB64（padded 或 unpadded），所以用 imgB64 的尺寸
+          overlay.width = img.naturalWidth;
+          overlay.height = img.naturalHeight;
+          ctx.clearRect(0, 0, img.naturalWidth, img.naturalHeight);
+          ctx.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight);
+          const d = ctx.getImageData(0, 0, img.naturalWidth, img.naturalHeight);
           for (let i = 0; i < d.data.length; i += 4) {
             if (d.data[i] > 128) {
               d.data[i] = 124;
@@ -2802,12 +2793,8 @@ let origImgWidth = 0, origImgHeight = 0;
               off.width = ow; off.height = oh;
               const ctx = off.getContext("2d");
               ctx.drawImage(base, 0, 0);
-              const gw = gen.naturalWidth, gh = gen.naturalHeight;
-              if (gw === ow && gh === oh) {
-                ctx.drawImage(gen, 0, 0);
-              } else {
-                ctx.drawImage(gen, cropLeft, cropTop, cropW, cropH);
-              }
+              // 缩放生成图到裁剪区域大小，覆盖原始图对应区域
+              ctx.drawImage(gen, cropLeft, cropTop, cropW, cropH);
               showDlFull(off.toDataURL("image/png"));
             };
             base.onload = tryShow; base.src = "data:image/png;base64," + originalImgB64;
