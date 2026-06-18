@@ -8,9 +8,12 @@
 - **自动遮罩** — 基于 Hugging Face 的衣物分割
 - **SDXL 宽高比**控制（16:9、4:3、3:2 等）
 - **输出格式**选择（原始 RGB / JPEG / PNG）
+- **预览格式**和进度显示步长配置
+- **放大模型预设** — 动漫（Real-ESRGAN）/ 真实（UltraSharp）
+- **发送到图生图** — 一键复用生成图像和参数
 - **实时进度**流式展示，支持每步预览
-- **参数预设**，保存在浏览器 localStorage
 - **Token 计数**实时显示
+- **参数预设**，保存在浏览器 localStorage
 - **双主题** — Apple 浅色 / Original 深色
 - **双语** — 英文 / 中文
 
@@ -55,7 +58,7 @@ SSE 事件流由 `sse.py` 处理 —— raw RGB 字节转 PNG base64，progress 
 
 ### 前端 (templates/index.html)
 
-单文件纯 HTML/CSS/JS。无框架，无构建步骤。15 个参数字段，图片上传+裁剪模态框，遮罩编辑器，自动遮罩叠加，参数预设，双主题，双语。
+单文件纯 HTML/CSS/JS。无框架，无构建步骤。15 个参数字段，图片上传+裁剪模态框，遮罩编辑器，自动遮罩叠加，参数预设，放大模型预设，双主题，双语。
 
 可复用模块位于 `/static/`：
 - `params.js` — `createParamsForm()`: DOM ↔ 字段值双向绑定；`createParamsPayload()`: 字段 → 网络请求载荷
@@ -67,8 +70,8 @@ SSE 事件流由 `sse.py` 处理 —— raw RGB 字节转 PNG base64，progress 
 uv run python app.py            # 启动服务 (http://0.0.0.0:5000)
 
 # 测试
-uv run pytest                   # 69 个 Python 测试（约 1 秒）
-uv run pytest -m "not performance"  # 跳过性能测试（65 个）
+uv run pytest                   # 70 个 Python 测试（约 1 秒）
+uv run pytest -m "not performance"  # 跳过性能测试（66 个）
 uv run pytest --cov             # 含覆盖率报告（>90%）
 bun test                        # 87 个 JS 测试（约 80 毫秒）
 
@@ -83,10 +86,10 @@ bun prettier --write .          # 格式化 HTML / CSS / JS
 | 模块 | 覆盖率 | 测试数 |
 |---|---|---|
 | `sse.py` | 100% | 24 Python |
-| `app.py` | 87% | 45 Python |
+| `app.py` | 93% | 46 Python |
 | `params.js` | — | 56 JS |
 | `sse-client.js` | — | 17 JS |
-| **总计** | **91%** | **69 Python + 87 JS = 156 个测试** |
+| **总计** | **95%** | **70 Python + 87 JS = 157 个测试** |
 
 ## 可信后端白名单
 

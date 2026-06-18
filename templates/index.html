@@ -2393,13 +2393,22 @@ worst quality, low quality, normal quality, poorly drawn, lowres, low resolution
         const ctx = overlay.getContext("2d");
         const img = new Image();
         img.onload = () => {
-          const mw = img.naturalWidth;
-          const mh = img.naturalHeight;
-          overlay.width = mw;
-          overlay.height = mh;
-          ctx.clearRect(0, 0, mw, mh);
-          ctx.drawImage(img, 0, 0, mw, mh);
-          const d = ctx.getImageData(0, 0, mw, mh);
+          let mw, mh;
+          if (img2imgPaddingOffset) {
+            const { x: ox, y: oy, origW, origH } = img2imgPaddingOffset;
+            overlay.width = origW;
+            overlay.height = origH;
+            ctx.clearRect(0, 0, origW, origH);
+            ctx.drawImage(img, ox, oy, origW, origH, 0, 0, origW, origH);
+          } else {
+            mw = img.naturalWidth;
+            mh = img.naturalHeight;
+            overlay.width = mw;
+            overlay.height = mh;
+            ctx.clearRect(0, 0, mw, mh);
+            ctx.drawImage(img, 0, 0, mw, mh);
+          }
+          const d = ctx.getImageData(0, 0, overlay.width, overlay.height);
           for (let i = 0; i < d.data.length; i += 4) {
             if (d.data[i] > 128) {
               d.data[i] = 124;
@@ -2643,7 +2652,7 @@ upscalerSelect.addEventListener("change", () => {
           };
           lastOutputB64 = data.png_image;
           lastCompleteData = data;
-          if (mode === "img2img" && lastPayload && lastPayload.mask && lastPayload.image) {
+          if (mode === "img2img" && lastPayload && lastPayload.mask && lastPayload.image && !img2imgPaddingOffset) {
             compositeInpaint(lastPayload.image, data.png_image, lastPayload.mask).then((src) => {
               setOutput(src);
               // composite 后从 data URL 提取 base64
@@ -2810,12 +2819,12 @@ upscalerSelect.addEventListener("change", () => {
         // SDXL 需要 1024×1024 画布；将非方形图加黑边填充
         const workB64 = isNonSquare ? await padImageToSquare(b64, 1024) : b64;
 
-        // 记录填充偏移量（用于 compositeInpaint 定位生成图）
+        // 记录填充偏移量（含原始尺寸）
         if (isNonSquare) {
           const scale = Math.min(1024 / iw, 1024 / ih);
-          const w = iw * scale;
-          const h = ih * scale;
-          img2imgPaddingOffset = { x: (1024 - w) / 2, y: (1024 - h) / 2 };
+          const w = Math.round(iw * scale);
+          const h = Math.round(ih * scale);
+          img2imgPaddingOffset = { x: Math.round((1024 - w) / 2), y: Math.round((1024 - h) / 2), origW: iw, origH: ih };
         } else {
           img2imgPaddingOffset = null;
         }
@@ -2885,26 +2894,24 @@ upscalerSelect.addEventListener("change", () => {
         const ow = origImg.naturalWidth, oh = origImg.naturalHeight;
 
         if (img2imgPaddingOffset) {
-          // 填充案例：在 padded 1024×1024 canvas 上合成，最后裁剪回原始尺寸
+          // 填充案例：在 1024×1024 padded space 合成（三者坐标对齐），最后裁剪
           const padded = 1024;
+          const ox = img2imgPaddingOffset.x, oy = img2imgPaddingOffset.y;
           const off = document.createElement("canvas");
           off.width = padded;
           off.height = padded;
           const ctx = off.getContext("2d");
-          const ox = img2imgPaddingOffset.x, oy = img2imgPaddingOffset.y;
 
-          // 原图（居中放置）
-          ctx.fillStyle = "#000";
-          ctx.fillRect(0, 0, padded, padded);
-          ctx.drawImage(origImg, ox, oy, ow, oh);
+          // 原图（padded 尺寸）
+          ctx.drawImage(origImg, 0, 0, padded, padded);
           const origData = ctx.getImageData(0, 0, padded, padded);
 
-          // 生成图（同位置放置，LD 会去掉黑边输出原始比例）
+          // 生成图（放到偏移位置，尺寸=原始尺寸）
           ctx.clearRect(0, 0, padded, padded);
           ctx.drawImage(genImg, ox, oy, ow, oh);
           const genData = ctx.getImageData(0, 0, padded, padded);
 
-          // 遮罩（全尺寸）
+          // 遮罩（padded 尺寸）
           ctx.clearRect(0, 0, padded, padded);
           ctx.drawImage(maskImg, 0, 0, padded, padded);
           const maskData = ctx.getImageData(0, 0, padded, padded);

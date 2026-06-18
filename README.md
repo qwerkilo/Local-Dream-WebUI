@@ -8,9 +8,12 @@ A web-based UI for [Local Dream](https://github.com/xororz/local-dream) — the 
 - **Automask** — automatic clothing segmentation via Hugging Face
 - **Aspect ratio control** for SDXL models (16:9, 4:3, 3:2, etc.)
 - **Output format** selection (raw RGB / JPEG / PNG)
+- **Preview format** and progress stride configuration
+- **Upscaler presets** — Anime (Real-ESRGAN) / Realistic (UltraSharp)
+- **Send to img2img** — reuse generated images and params in img2img
 - **Real-time progress** streaming with per-step previews
-- **Parameter presets** saved in browser localStorage
 - **Token count** display for prompts
+- **Parameter presets** saved in browser localStorage
 - **Dual theme** — Apple light / Original dark
 - **Dual language** — English / 中文
 
@@ -55,7 +58,7 @@ SSE event stream processed in `sse.py` — raw RGB bytes converted to PNG base64
 
 ### Frontend (templates/index.html)
 
-Single-file vanilla HTML/CSS/JS. No framework, no build step. 15 parameter fields, image upload with crop modal, mask editor, automask overlay, parameter presets, dual theme, dual language.
+Single-file vanilla HTML/CSS/JS. No framework, no build step. 15 parameter fields, image upload with crop modal, mask editor, automask overlay, parameter presets, upscaler model presets, dual theme, dual language.
 
 Reusable modules under `/static/`:
 - `params.js` — `createParamsForm()`: DOM ↔ field value binding; `createParamsPayload()`: field → wire payload
@@ -67,8 +70,8 @@ Reusable modules under `/static/`:
 uv run python app.py          # Start server (http://0.0.0.0:5000)
 
 # Tests
-uv run pytest                 # 69 Python tests (~1s)
-uv run pytest -m "not performance"  # Skip perf tests (65 tests)
+uv run pytest                 # 70 Python tests (~1s)
+uv run pytest -m "not performance"  # Skip perf tests (66 tests)
 uv run pytest --cov           # With coverage report (>90%)
 bun test                      # 87 JS tests (~80ms)
 
@@ -83,10 +86,10 @@ bun prettier --write .        # Format HTML / CSS / JS
 | Module | Coverage | Tests |
 |---|---|---|
 | `sse.py` | 100% | 24 Python tests |
-| `app.py` | 87% | 45 Python tests |
+| `app.py` | 93% | 46 Python tests |
 | `params.js` | — | 56 JS tests (payload + form) |
 | `sse-client.js` | — | 17 JS tests |
-| **Total** | **91%** | **69 Python + 87 JS = 156 tests** |
+| **Total** | **95%** | **70 Python + 87 JS = 157 tests** |
 
 ## Trusted-host Allowlist
 

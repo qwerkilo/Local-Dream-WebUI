@@ -322,6 +322,7 @@ def test_upscale_json_body_decodes_png_and_forwards(client):
     """JSON body 含 base64 PNG → 解码并转发到 LD。"""
     import base64
     import io as io_module
+
     from PIL import Image as PILImage
 
     # 用 Pillow 创建 1x1 红像素 PNG
