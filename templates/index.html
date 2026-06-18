@@ -2781,28 +2781,6 @@ let origImgWidth = 0, origImgHeight = 0;
             $("dlFullBtn").classList.remove("hidden");
             $("dlFullBtn").href = src;
           }
-          function stitchFullToOriginal(patchSrc) {
-            if (!originalImgB64 || !lastCropRegion) return;
-            const { cropX, cropY, cropScale, targetSize } = lastCropRegion;
-            const patch = new Image();
-            const base = new Image();
-            let loaded = 0;
-            const tryShow = () => {
-              loaded++;
-              if (loaded < 2) return;
-              const ow = base.naturalWidth, oh = base.naturalHeight;
-              const cropLeft = -cropX / cropScale, cropTop = -cropY / cropScale;
-              const cropW = targetSize / cropScale, cropH = targetSize / cropScale;
-              const off = document.createElement("canvas");
-              off.width = ow; off.height = oh;
-              const ctx = off.getContext("2d");
-              ctx.drawImage(base, 0, 0);
-              ctx.drawImage(patch, cropLeft, cropTop, cropW, cropH);
-              showDlFull(off.toDataURL("image/png"));
-            };
-            base.onload = tryShow; base.src = "data:image/png;base64," + originalImgB64;
-            patch.onload = tryShow; patch.src = patchSrc;
-          }
           function stitchFullToOriginal(genB64) {
             // 以 originalImgB64（发送到图生图时的原图）为底，在裁剪区域位置缩放叠放生成图
             if (!originalImgB64 || !lastCropRegion) return;
