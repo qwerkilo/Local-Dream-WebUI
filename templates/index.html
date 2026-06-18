@@ -2785,15 +2785,8 @@ let origImgWidth = 0, origImgHeight = 0;
             $("dlFullBtn").href = src;
           }
           function stitchFullToOriginal(genB64) {
-            // 以 originalImgB64（发送到图生图时的原图）为底，在裁剪区域位置缩放叠放生成图
             if (!originalImgB64 || !lastCropRegion) return;
             const { cropX, cropY, cropScale, targetSize } = lastCropRegion;
-            const ox = img2imgPaddingOffset ? img2imgPaddingOffset.x : 0;
-            const oy = img2imgPaddingOffset ? img2imgPaddingOffset.y : 0;
-            const cropLeft = (-cropX / cropScale) - ox;
-            const cropTop = (-cropY / cropScale) - oy;
-            const cropW = targetSize / cropScale;
-            const cropH = targetSize / cropScale;
             const base = new Image();
             const gen = new Image();
             let loaded = 0;
@@ -2805,8 +2798,23 @@ let origImgWidth = 0, origImgHeight = 0;
               off.width = ow; off.height = oh;
               const ctx = off.getContext("2d");
               ctx.drawImage(base, 0, 0);
-              // 缩放生成图到裁剪区域大小，覆盖原始图对应区域
-              ctx.drawImage(gen, cropLeft, cropTop, cropW, cropH);
+
+              if (img2imgPaddingOffset) {
+                // 填充案例：LD 输出已是原始 unpadded 尺寸，直接画到原始画布上
+                // padding 区域（黑边）保留原图，生成区域在正确位置
+                const { x: ox, y: oy, origW, origH } = img2imgPaddingOffset;
+                // 先填黑边（从原始 padded 图裁出）
+                ctx.drawImage(base, 0, 0, ow, oh);
+                // gen = 576x1024，画到原始画布中心（ox=224 在 padded 中，但原始画布已无 padding）
+                ctx.drawImage(gen, 0, 0, ow, oh);
+              } else {
+                // 裁剪案例：gen 缩放到裁剪区域大小
+                const cropLeft = -cropX / cropScale;
+                const cropTop = -cropY / cropScale;
+                const cropW = targetSize / cropScale;
+                const cropH = targetSize / cropScale;
+                ctx.drawImage(gen, cropLeft, cropTop, cropW, cropH);
+              }
               showDlFull(off.toDataURL("image/png"));
             };
             base.onload = tryShow; base.src = "data:image/png;base64," + originalImgB64;
@@ -3049,6 +3057,41 @@ let origImgWidth = 0, origImgHeight = 0;
         const [origImg, genImg, maskImg] = await Promise.all([origB64, genB64, maskB64].map(load));
 
         const ow = origImg.naturalWidth, oh = origImg.naturalHeight;
+
+        // 高斯模糊遮罩，让合成边缘平滑过渡
+        function featherMask(maskData, w, h, radius) {
+          const d = new Float32Array(w * h);
+          // 取 alpha 通道作为灰度
+          for (let i = 0; i < w * h; i++) d[i] = maskData.data[i * 4] / 255;
+          // 水平 passes
+          const tmp = new Float32Array(w * h);
+          for (let y = 0; y < h; y++) {
+            for (let x = 0; x < w; x++) {
+              let sum = 0, wt = 0;
+              for (let k = -radius; k <= radius; k++) {
+                const xx = Math.min(w - 1, Math.max(0, x + k));
+                const g = Math.exp(-0.5 * (k * k) / (radius * radius));
+                sum += d[y * w + xx] * g;
+                wt += g;
+              }
+              tmp[y * w + x] = sum / wt;
+            }
+          }
+          // 垂直 passes
+          for (let y = 0; y < h; y++) {
+            for (let x = 0; x < w; x++) {
+              let sum = 0, wt = 0;
+              for (let k = -radius; k <= radius; k++) {
+                const yy = Math.min(h - 1, Math.max(0, y + k));
+                const g = Math.exp(-0.5 * (k * k) / (radius * radius));
+                sum += tmp[yy * w + x] * g;
+                wt += g;
+              }
+              d[y * w + x] = sum / wt;
+            }
+          }
+          return d;
+        }
 
         if (img2imgPaddingOffset) {
           // 填充案例：在 1024×1024 padded space 合成（三者坐标对齐），最后裁剪
