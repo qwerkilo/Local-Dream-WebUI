@@ -2753,6 +2753,7 @@ let origImgWidth = 0, origImgHeight = 0;
           lastOutputB64 = data.png_image;
           lastCompleteData = data;
           lastFullComposite = null;
+          $("dlFullBtn").classList.add("hidden");
           if (mode === "img2img" && lastCropRegion) {
             const mask = lastPayload && lastPayload.mask;
             if (img2imgPaddingOffset) {
