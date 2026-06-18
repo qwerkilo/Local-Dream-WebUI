@@ -1949,6 +1949,7 @@ worst quality, low quality, normal quality, poorly drawn, lowres, low resolution
             imgB64 = null;
             maskB64 = null;
             img2imgPaddingOffset = null;
+            originalImgB64 = null;
             $("maskEnabled").checked = false;
           }
         }),
@@ -1971,6 +1972,7 @@ worst quality, low quality, normal quality, poorly drawn, lowres, low resolution
         if (!file) return;
         const reader = new FileReader();
         reader.onload = (ev) => {
+          originalImgB64 = ev.target.result.split(",")[1];
           const img = new Image();
           img.onload = () => {
             rawUploadedImg = img;
@@ -2182,6 +2184,7 @@ worst quality, low quality, normal quality, poorly drawn, lowres, low resolution
           cropScale,
           cropImgW: cropImg.width,
           cropImgH: cropImg.height,
+          targetSize: sz,
         };
 
         // Export outpaint mask (white where empty, black where image covers)
@@ -2548,6 +2551,7 @@ let lastOutputWidth = 0;
 let lastOutputHeight = 0;
 let lastCompleteData = null;
 let lastFullComposite = null;
+let originalImgB64 = null; // original uploaded/source image base64 (unpadded, uncropped)
       // sendToImg2img 填充非方形图到正方形时记录偏移量，供 compositeInpaint 定位
       let img2imgPaddingOffset = null;
 
@@ -2745,10 +2749,10 @@ let lastFullComposite = null;
           lastOutputB64 = data.png_image;
           lastCompleteData = data;
           lastFullComposite = null;
-          // 裁剪后需要合成回全图
-          if (mode === "img2img" && rawUploadedImg && lastCropRegion) {
+          // 裁剪后合成回全图（参考 LD: 从原始图解码，在 crop rect 位置叠加生成图）
+          if (mode === "img2img" && lastCropRegion) {
             if (img2imgPaddingOffset) {
-              // 填充案例：返回 1024×1024 padded 画布（含黑边），LD 输出叠放在正确位置
+              // 填充案例：在 1024×1024 padded 画布上叠放生成图
               setOutput("data:image/png;base64," + data.png_image);
               const { x: ox, y: oy, origW, origH } = img2imgPaddingOffset;
               const sz = 1024;
@@ -2763,28 +2767,19 @@ let lastFullComposite = null;
               };
               tmp.src = "data:image/png;base64," + data.png_image;
             } else {
-              // 普通裁剪
+              // 普通裁剪：合成回原始全图
               const mask = lastPayload && lastPayload.mask;
+              // 先获得补丁图（合成版或生成图）
+              const patchSrc = !mask ? "data:image/png;base64," + data.png_image : null;
               if (mask) {
                 compositeInpaint(lastPayload.image, data.png_image, mask).then((src) => {
                   setOutput(src);
                   lastOutputB64 = src.split(",")[1];
-                  showDlFull(src);
+                  stitchFullToOriginal(src);
                 });
               } else {
-                const img = new Image();
-                img.onload = () => {
-                  setOutput("data:image/png;base64," + data.png_image);
-                  const ow = rawUploadedImg.naturalWidth, oh = rawUploadedImg.naturalHeight;
-                  const off = document.createElement("canvas");
-                  off.width = ow; off.height = oh;
-                  const ctx = off.getContext("2d");
-                  ctx.drawImage(rawUploadedImg, 0, 0);
-                  const { cropX, cropY, cropScale } = lastCropRegion;
-                  ctx.drawImage(img, -cropX / cropScale, -cropY / cropScale, (data.width || img.naturalWidth) / cropScale, (data.height || img.naturalHeight) / cropScale);
-                  showDlFull(off.toDataURL("image/png"));
-                };
-                img.src = "data:image/png;base64," + data.png_image;
+                setOutput("data:image/png;base64," + data.png_image);
+                stitchFullToOriginal("data:image/png;base64," + data.png_image);
               }
             }
           } else {
@@ -2795,6 +2790,28 @@ let lastFullComposite = null;
             lastFullComposite = src;
             $("dlFullBtn").classList.remove("hidden");
             $("dlFullBtn").href = src;
+          }
+          function stitchFullToOriginal(patchSrc) {
+            if (!originalImgB64 || !lastCropRegion) return;
+            const { cropX, cropY, cropScale, targetSize } = lastCropRegion;
+            const patch = new Image();
+            const base = new Image();
+            let loaded = 0;
+            const tryShow = () => {
+              loaded++;
+              if (loaded < 2) return;
+              const ow = base.naturalWidth, oh = base.naturalHeight;
+              const cropLeft = -cropX / cropScale, cropTop = -cropY / cropScale;
+              const cropW = targetSize / cropScale, cropH = targetSize / cropScale;
+              const off = document.createElement("canvas");
+              off.width = ow; off.height = oh;
+              const ctx = off.getContext("2d");
+              ctx.drawImage(base, 0, 0);
+              ctx.drawImage(patch, cropLeft, cropTop, cropW, cropH);
+              showDlFull(off.toDataURL("image/png"));
+            };
+            base.onload = tryShow; base.src = "data:image/png;base64," + originalImgB64;
+            patch.onload = tryShow; patch.src = patchSrc;
           }
           // 重置 upscale 按钮状态
           $("upscaleBtn").disabled = false;
@@ -2953,6 +2970,9 @@ let lastFullComposite = null;
 
         // SDXL 需要 1024×1024 画布；将非方形图加黑边填充
         const workB64 = isNonSquare ? await padImageToSquare(b64, 1024) : b64;
+
+        // 保存原始图（ unpadded ）供 Download Full 使用
+        originalImgB64 = b64;
 
         // 记录填充偏移量（含原始尺寸）
         if (isNonSquare) {
