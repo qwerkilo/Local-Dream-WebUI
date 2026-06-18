@@ -2757,16 +2757,17 @@ let origImgWidth = 0, origImgHeight = 0;
           if (mode === "img2img" && lastCropRegion) {
             const mask = lastPayload && lastPayload.mask;
             if (img2imgPaddingOffset) {
-              // 填充案例：以 originalImgB64（原图）为底，在裁剪区域位置缩放叠放生成图
-              setOutput("data:image/png;base64," + data.png_image);
+              // 填充案例：LD 输出已是最终图，直接显示并使用为全图
+              const rawSrc = "data:image/png;base64," + data.png_image;
+              setOutput(rawSrc);
               if (mask) {
                 compositeInpaint(lastPayload.image, data.png_image, mask).then((src) => {
                   setOutput(src);
                   lastOutputB64 = src.split(",")[1];
-                  stitchFullToOriginal(src);
+                  showDlFull(src);
                 });
               } else {
-                stitchFullToOriginal("data:image/png;base64," + data.png_image);
+                showDlFull(rawSrc);
               }
             } else if (mask) {
               compositeInpaint(lastPayload.image, data.png_image, mask).then((src) => {
@@ -2788,6 +2789,7 @@ let origImgWidth = 0, origImgHeight = 0;
             $("dlFullBtn").href = src;
           }
           function stitchFullToOriginal(genB64) {
+            // 裁剪案例：将 gen 缩放到裁剪区域大小后画到原始图上
             if (!originalImgB64 || !lastCropRegion) return;
             const { cropX, cropY, cropScale, targetSize } = lastCropRegion;
             const base = new Image();
@@ -2801,23 +2803,11 @@ let origImgWidth = 0, origImgHeight = 0;
               off.width = ow; off.height = oh;
               const ctx = off.getContext("2d");
               ctx.drawImage(base, 0, 0);
-
-              if (img2imgPaddingOffset) {
-                // 填充案例：LD 输出已是原始 unpadded 尺寸，直接画到原始画布上
-                // padding 区域（黑边）保留原图，生成区域在正确位置
-                const { x: ox, y: oy, origW, origH } = img2imgPaddingOffset;
-                // 先填黑边（从原始 padded 图裁出）
-                ctx.drawImage(base, 0, 0, ow, oh);
-                // gen = 576x1024，画到原始画布中心（ox=224 在 padded 中，但原始画布已无 padding）
-                ctx.drawImage(gen, 0, 0, ow, oh);
-              } else {
-                // 裁剪案例：gen 缩放到裁剪区域大小
-                const cropLeft = -cropX / cropScale;
-                const cropTop = -cropY / cropScale;
-                const cropW = targetSize / cropScale;
-                const cropH = targetSize / cropScale;
-                ctx.drawImage(gen, cropLeft, cropTop, cropW, cropH);
-              }
+              const cropLeft = -cropX / cropScale;
+              const cropTop = -cropY / cropScale;
+              const cropW = targetSize / cropScale;
+              const cropH = targetSize / cropScale;
+              ctx.drawImage(gen, cropLeft, cropTop, cropW, cropH);
               showDlFull(off.toDataURL("image/png"));
             };
             base.onload = tryShow; base.src = "data:image/png;base64," + originalImgB64;
