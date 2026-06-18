@@ -2745,47 +2745,85 @@ let lastFullComposite = null;
           lastOutputB64 = data.png_image;
           lastCompleteData = data;
           lastFullComposite = null;
-          // 裁剪后需要合成回全图：有遮罩时 compositeInpaint，无遮罩时直接替换裁剪区域
+          // 裁剪后需要合成回全图
           if (mode === "img2img" && rawUploadedImg && lastCropRegion) {
             const mask = lastPayload && lastPayload.mask;
-            const doComposite = () => {
-              if (mask) {
-                compositeInpaint(lastPayload.image, data.png_image, mask).then((src) => {
-                  setOutput(src);
-                  lastOutputB64 = src.split(",")[1];
-                  lastFullComposite = src;
-                  $("dlFullBtn").classList.remove("hidden");
-                  $("dlFullBtn").href = src;
-                });
-              } else {
-                // 无遮罩：直接把生成图画到原始图的裁剪区域
-                const img = new Image();
-                img.onload = () => {
-                  const off = document.createElement("canvas");
-                  const ow = rawUploadedImg.naturalWidth, oh = rawUploadedImg.naturalHeight;
-                  off.width = ow; off.height = oh;
-                  const ctx = off.getContext("2d");
-                  ctx.drawImage(rawUploadedImg, 0, 0);
-                  const { cropX, cropY, cropScale } = lastCropRegion;
-                  const iw = data.width || img.naturalWidth;
-                  const ih = data.height || img.naturalHeight;
-                  ctx.drawImage(img, -cropX / cropScale, -cropY / cropScale, iw / cropScale, ih / cropScale);
-                  const src = off.toDataURL("image/png");
-                  lastFullComposite = src;
-                  $("dlFullBtn").classList.remove("hidden");
-                  $("dlFullBtn").href = src;
-                };
-                img.src = "data:image/png;base64," + data.png_image;
-              }
-            };
-            if (img2imgPaddingOffset) {
-              // padded case: LD 已自行裁剪，不需合成
+            if (img2imgPaddingOffset && mask) {
+              // 填充 + 遮罩：在 padded canvas 上合成（compositeInpaint 接收的是裁剪后图不适用）
               setOutput("data:image/png;base64," + data.png_image);
+              bakeFullComposite(rawUploadedImg, data, img2imgPaddingOffset);
+            } else if (mask) {
+              compositeInpaint(lastPayload.image, data.png_image, mask).then((src) => {
+                setOutput(src);
+                lastOutputB64 = src.split(",")[1];
+                showDlFull(src);
+              });
+            } else if (!img2imgPaddingOffset) {
+              // 非填充无遮罩：直接叠图到原始图
+              const img = new Image();
+              img.onload = () => {
+                const ow = rawUploadedImg.naturalWidth, oh = rawUploadedImg.naturalHeight;
+                const off = document.createElement("canvas");
+                off.width = ow; off.height = oh;
+                const ctx = off.getContext("2d");
+                ctx.drawImage(rawUploadedImg, 0, 0);
+                const { cropX, cropY, cropScale } = lastCropRegion;
+                ctx.drawImage(img, -cropX / cropScale, -cropY / cropScale, (data.width || img.naturalWidth) / cropScale, (data.height || img.naturalHeight) / cropScale);
+                showDlFull(off.toDataURL("image/png"));
+              };
+              img.src = "data:image/png;base64," + data.png_image;
             } else {
-              doComposite();
+              setOutput("data:image/png;base64," + data.png_image);
             }
           } else {
             setOutput("data:image/png;base64," + data.png_image);
+          }
+          function showDlFull(src) {
+            lastFullComposite = src;
+            $("dlFullBtn").classList.remove("hidden");
+            $("dlFullBtn").href = src;
+          }
+          function bakeFullComposite(baseImg, data, offset) {
+            if (!baseImg || !offset) return;
+            const ox = offset.x, oy = offset.y, ow = offset.origW, oh = offset.origH;
+            const padded = 1024;
+            const off = document.createElement("canvas");
+            off.width = padded; off.height = padded;
+            const ctx = off.getContext("2d");
+            // 原图（padded 尺寸）
+            ctx.drawImage(baseImg, 0, 0, padded, padded);
+            const origData = ctx.getImageData(0, 0, padded, padded);
+            // 生成图（放到偏移位置）
+            const genImg = new Image();
+            genImg.onload = () => {
+              ctx.clearRect(0, 0, padded, padded);
+              ctx.drawImage(genImg, ox, oy, ow, oh);
+              const genData = ctx.getImageData(0, 0, padded, padded);
+              // 遮罩
+              const maskImg = new Image();
+              maskImg.onload = () => {
+                ctx.clearRect(0, 0, padded, padded);
+                ctx.drawImage(maskImg, 0, 0, padded, padded);
+                const maskData = ctx.getImageData(0, 0, padded, padded);
+                // 合成
+                const out = ctx.createImageData(padded, padded);
+                for (let i = 0; i < out.data.length; i += 4) {
+                  const m = maskData.data[i] / 255;
+                  out.data[i] = origData.data[i] * (1 - m) + genData.data[i] * m;
+                  out.data[i + 1] = origData.data[i + 1] * (1 - m) + genData.data[i + 1] * m;
+                  out.data[i + 2] = origData.data[i + 2] * (1 - m) + genData.data[i + 2] * m;
+                  out.data[i + 3] = 255;
+                }
+                ctx.putImageData(out, 0, 0);
+                // 裁剪回原始尺寸
+                const crop = document.createElement("canvas");
+                crop.width = ow; crop.height = oh;
+                crop.getContext("2d").drawImage(off, ox, oy, ow, oh, 0, 0, ow, oh);
+                showDlFull(crop.toDataURL("image/png"));
+              };
+              maskImg.src = "data:image/png;base64," + mask;
+            };
+            genImg.src = "data:image/png;base64," + data.png_image;
           }
           // 重置 upscale 按钮状态
           $("upscaleBtn").disabled = false;
