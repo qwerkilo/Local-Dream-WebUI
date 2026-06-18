@@ -2762,9 +2762,11 @@ let origImgWidth = 0, origImgHeight = 0;
                 compositeInpaint(lastPayload.image, data.png_image, mask).then((src) => {
                   setOutput(src);
                   lastOutputB64 = src.split(",")[1];
+                  stitchFullToOriginal(src);
                 });
+              } else {
+                stitchFullToOriginal("data:image/png;base64," + data.png_image);
               }
-              stitchFullToOriginal("data:image/png;base64," + data.png_image);
             } else if (mask) {
               compositeInpaint(lastPayload.image, data.png_image, mask).then((src) => {
                 setOutput(src);
