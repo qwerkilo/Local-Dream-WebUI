@@ -2752,7 +2752,7 @@ let originalImgB64 = null; // original uploaded/source image base64 (unpadded, u
           if (mode === "img2img" && lastCropRegion) {
             const mask = lastPayload && lastPayload.mask;
             if (img2imgPaddingOffset) {
-              // 填充案例：LD 输出已在原始尺寸，直接作为全图
+              // 填充案例：在 1024×1024 padded canvas 上叠放生成图
               setOutput("data:image/png;base64," + data.png_image);
               if (mask) {
                 compositeInpaint(lastPayload.image, data.png_image, mask).then((src) => {
@@ -2760,7 +2760,8 @@ let originalImgB64 = null; // original uploaded/source image base64 (unpadded, u
                   lastOutputB64 = src.split(",")[1];
                 });
               }
-              showDlFull("data:image/png;base64," + data.png_image);
+              // 用 rawUploadedImg（1024×1024 padded）做全图
+              stitchFullPaddedRaw(data.png_image);
             } else if (mask) {
               compositeInpaint(lastPayload.image, data.png_image, mask).then((src) => {
                 setOutput(src);
@@ -2801,6 +2802,20 @@ let originalImgB64 = null; // original uploaded/source image base64 (unpadded, u
             };
             base.onload = tryShow; base.src = "data:image/png;base64," + originalImgB64;
             patch.onload = tryShow; patch.src = patchSrc;
+          }
+          function stitchFullPaddedRaw(genB64) {
+            // 以 1024×1024 padded 画布为底，叠放生成图 → 完整的方形全图（含黑边）
+            const { x: ox, y: oy, origW, origH } = img2imgPaddingOffset;
+            const gen = new Image();
+            gen.onload = () => {
+              const off = document.createElement("canvas");
+              off.width = 1024; off.height = 1024;
+              const ctx = off.getContext("2d");
+              ctx.drawImage(rawUploadedImg, 0, 0, 1024, 1024);
+              ctx.drawImage(gen, ox, oy, origW, origH);
+              showDlFull(off.toDataURL("image/png"));
+            };
+            gen.src = "data:image/png;base64," + genB64;
           }
           // 重置 upscale 按钮状态
           $("upscaleBtn").disabled = false;
