@@ -3063,9 +3063,10 @@ let origImgWidth = 0, origImgHeight = 0;
           ctx.drawImage(origImg, 0, 0, padded, padded);
           const origData = ctx.getImageData(0, 0, padded, padded);
 
-          // 生成图（放到偏移位置，尺寸=原始尺寸）
+          // 生成图（放到偏移位置，用生成图自身尺寸而非 padded 尺寸）
+          const gw = genImg.naturalWidth, gh = genImg.naturalHeight;
           ctx.clearRect(0, 0, padded, padded);
-          ctx.drawImage(genImg, ox, oy, ow, oh);
+          ctx.drawImage(genImg, ox, oy, gw, gh);
           const genData = ctx.getImageData(0, 0, padded, padded);
 
           // 遮罩（padded 尺寸）
@@ -3084,11 +3085,12 @@ let origImgWidth = 0, origImgHeight = 0;
           }
           ctx.putImageData(out, 0, 0);
 
-          // 裁剪回原始尺寸
+          // 裁剪回原始尺寸（从 padding offset 取原始 unpadded 尺寸）
+          const { origW, origH } = img2imgPaddingOffset;
           const crop = document.createElement("canvas");
-          crop.width = ow;
-          crop.height = oh;
-          crop.getContext("2d").drawImage(off, ox, oy, ow, oh, 0, 0, ow, oh);
+          crop.width = origW;
+          crop.height = origH;
+          crop.getContext("2d").drawImage(off, ox, oy, origW, origH, 0, 0, origW, origH);
           return crop.toDataURL("image/png");
         }
 
