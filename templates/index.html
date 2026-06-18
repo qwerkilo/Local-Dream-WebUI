@@ -2748,7 +2748,7 @@ let lastFullComposite = null;
           // 裁剪后需要合成回全图
           if (mode === "img2img" && rawUploadedImg && lastCropRegion) {
             if (img2imgPaddingOffset) {
-              // 填充案例：在 1024×1024 padded canvas 上叠放生成图再裁剪
+              // 填充案例：返回 1024×1024 padded 画布（含黑边），LD 输出叠放在正确位置
               setOutput("data:image/png;base64," + data.png_image);
               const { x: ox, y: oy, origW, origH } = img2imgPaddingOffset;
               const sz = 1024;
@@ -2759,10 +2759,7 @@ let lastFullComposite = null;
               const tmp = new Image();
               tmp.onload = () => {
                 ctx.drawImage(tmp, ox, oy, origW, origH);
-                const crop = document.createElement("canvas");
-                crop.width = origW; crop.height = origH;
-                crop.getContext("2d").drawImage(off, ox, oy, origW, origH, 0, 0, origW, origH);
-                showDlFull(crop.toDataURL("image/png"));
+                showDlFull(off.toDataURL("image/png"));
               };
               tmp.src = "data:image/png;base64," + data.png_image;
             } else {
