@@ -2,9 +2,10 @@
 //
 // 本模块是 templates/index.html 表单 ↔ /generate wire payload 的接缝：
 // - createParamsForm：DOM 控件 ↔ 字段值的双向接缝（read / apply / bind），不掺业务规则。
-//   字段表形状：name → { id, read, write }。11 个键（snake_case 输出）：
+//   字段表形状：name → { id, read, write }。15 个键（snake_case 输出）：
 //   prompt / negative_prompt / size / steps / cfg / scheduler /
-//   karras / use_opencl / clip_skip / seed / local_dream_url。
+//   karras / use_opencl / clip_skip / seed / local_dream_url /
+//   aspect_ratio / output_format / preview_format / show_diffusion_stride。
 //   image / mask **不在** ParamsForm（那是图像状态，后续候选）。
 // - createParamsPayload：纯函数工厂，输入 raw snap（来自 form.read()），
 //   输出 wire object（snake_case，省略空值/默认值）。默认 rules 内置在模块顶部。
@@ -20,6 +21,7 @@ const ALLOWED_SIZES = [256, 384, 512, 640, 768, 1024];
 // preset 模式下要保留的字段白名单。
 // 注意：mode / denoise_strength 进 preset（保存"txt2img vs img2img"和强度偏好）；
 // seed / use_opencl / local_dream_url 不进 preset（Q20 + 当前行为锁定）。
+// aspect_ratio / output_format / preview_format 可作为预设偏好保存。
 export const PRESET_FIELDS = [
   "prompt",
   "negative_prompt",
@@ -31,6 +33,9 @@ export const PRESET_FIELDS = [
   "clip_skip",
   "denoise_strength",
   "mode",
+  "aspect_ratio",
+  "output_format",
+  "preview_format",
 ];
 
 // 默认字段规则：每字段 { omitIf, postProcess }。
@@ -98,6 +103,22 @@ const DEFAULT_RULES = {
       return s.startsWith("http") ? s : "http://" + s;
     },
   },
+  aspect_ratio: {
+    omitIf: (v) => !v || v === "none",
+    postProcess: (v) => String(v).trim(),
+  },
+  output_format: {
+    omitIf: (v) => !v,
+    postProcess: (v) => String(v).trim(),
+  },
+  preview_format: {
+    omitIf: (v) => !v,
+    postProcess: (v) => String(v).trim(),
+  },
+  show_diffusion_stride: {
+    omitIf: (v) => v == null || v < 1,
+    postProcess: (v) => parseInt(v),
+  },
 };
 
 // local_dream_url 默认走 omitIf：ldToggle 未勾时 raw snap 的 local_dream_url
@@ -117,12 +138,16 @@ export function createParamsForm({ $ }) {
     prompt: {
       id: "prompt",
       read: () => $("prompt").value,
-      write: (v) => { $("prompt").value = v == null ? "" : String(v); },
+      write: (v) => {
+        $("prompt").value = v == null ? "" : String(v);
+      },
     },
     negative_prompt: {
       id: "negPrompt",
       read: () => $("negPrompt").value,
-      write: (v) => { $("negPrompt").value = v == null ? "" : String(v); },
+      write: (v) => {
+        $("negPrompt").value = v == null ? "" : String(v);
+      },
     },
     size: {
       id: "size",
@@ -144,32 +169,44 @@ export function createParamsForm({ $ }) {
     steps: {
       id: "steps",
       read: () => $("steps").value,
-      write: (v) => { $("steps").value = String(v); },
+      write: (v) => {
+        $("steps").value = String(v);
+      },
     },
     cfg: {
       id: "cfg",
       read: () => $("cfg").value,
-      write: (v) => { $("cfg").value = String(v); },
+      write: (v) => {
+        $("cfg").value = String(v);
+      },
     },
     scheduler: {
       id: "scheduler",
       read: () => $("scheduler").value,
-      write: (v) => { $("scheduler").value = v == null ? "" : String(v); },
+      write: (v) => {
+        $("scheduler").value = v == null ? "" : String(v);
+      },
     },
     karras: {
       id: "karras",
       read: () => $("karras").checked === true,
-      write: (v) => { $("karras").checked = v === true; },
+      write: (v) => {
+        $("karras").checked = v === true;
+      },
     },
     use_opencl: {
       id: "useOpenCL",
       read: () => $("useOpenCL").checked === true,
-      write: (v) => { $("useOpenCL").checked = v === true; },
+      write: (v) => {
+        $("useOpenCL").checked = v === true;
+      },
     },
     clip_skip: {
       id: "clipSkip",
       read: () => $("clipSkip").value,
-      write: (v) => { $("clipSkip").value = String(v); },
+      write: (v) => {
+        $("clipSkip").value = String(v);
+      },
     },
     seed: {
       id: "seed",
@@ -193,7 +230,37 @@ export function createParamsForm({ $ }) {
     local_dream_url: {
       id: "ldUrl",
       read: () => $("ldUrl").value,
-      write: (v) => { $("ldUrl").value = v == null ? "" : String(v); },
+      write: (v) => {
+        $("ldUrl").value = v == null ? "" : String(v);
+      },
+    },
+    aspect_ratio: {
+      id: "aspectRatio",
+      read: () => $("aspectRatio").value,
+      write: (v) => {
+        $("aspectRatio").value = v == null ? "" : String(v);
+      },
+    },
+    output_format: {
+      id: "outputFormat",
+      read: () => $("outputFormat").value,
+      write: (v) => {
+        $("outputFormat").value = v == null ? "" : String(v);
+      },
+    },
+    preview_format: {
+      id: "previewFormat",
+      read: () => $("previewFormat").value,
+      write: (v) => {
+        $("previewFormat").value = v == null ? "" : String(v);
+      },
+    },
+    show_diffusion_stride: {
+      id: "showDiffusionStride",
+      read: () => parseInt($("showDiffusionStride").value) || 1,
+      write: (v) => {
+        $("showDiffusionStride").value = String(v || 1);
+      },
     },
   };
 
@@ -206,6 +273,9 @@ export function createParamsForm({ $ }) {
     size: "change",
     scheduler: "change",
     ldUrl: "change",
+    aspectRatio: "change",
+    outputFormat: "change",
+    previewFormat: "change",
   };
 
   return {
@@ -255,7 +325,9 @@ export function createParamsForm({ $ }) {
         const el = $(sliderId);
         const vEl = $(valId);
         if (!el || !vEl) continue;
-        el.addEventListener("input", () => { vEl.textContent = el.value; });
+        el.addEventListener("input", () => {
+          vEl.textContent = el.value;
+        });
       }
 
       // size change → sizeCustom 可见性

@@ -53,8 +53,15 @@ describe("createParamsPayload.fromForm - 必发字段（永远不省）", () => 
     const wire = payload.fromForm({
       prompt: "  hello world  ",
       negative_prompt: "",
-      size: 512, steps: 1, cfg: 1,
-      scheduler: "", karras: false, use_opencl: false, clip_skip: 1, seed: null, local_dream_url: "",
+      size: 512,
+      steps: 1,
+      cfg: 1,
+      scheduler: "",
+      karras: false,
+      use_opencl: false,
+      clip_skip: 1,
+      seed: null,
+      local_dream_url: "",
     });
     expect(wire.prompt).toBe("hello world");
   });
@@ -64,8 +71,15 @@ describe("createParamsPayload.fromForm - 必发字段（永远不省）", () => 
     const wire = payload.fromForm({
       prompt: "x",
       negative_prompt: "",
-      size: 512, steps: 1, cfg: 1,
-      scheduler: "", karras: false, use_opencl: false, clip_skip: 1, seed: null, local_dream_url: "",
+      size: 512,
+      steps: 1,
+      cfg: 1,
+      scheduler: "",
+      karras: false,
+      use_opencl: false,
+      clip_skip: 1,
+      seed: null,
+      local_dream_url: "",
     });
     expect("negative_prompt" in wire).toBe(true);
     expect(wire.negative_prompt).toBe("");
@@ -74,9 +88,17 @@ describe("createParamsPayload.fromForm - 必发字段（永远不省）", () => 
   test("steps 防御性 parseInt", () => {
     const payload = createParamsPayload();
     const wire = payload.fromForm({
-      prompt: "x", negative_prompt: "",
-      size: 512, steps: "20", cfg: 1,
-      scheduler: "", karras: false, use_opencl: false, clip_skip: 1, seed: null, local_dream_url: "",
+      prompt: "x",
+      negative_prompt: "",
+      size: 512,
+      steps: "20",
+      cfg: 1,
+      scheduler: "",
+      karras: false,
+      use_opencl: false,
+      clip_skip: 1,
+      seed: null,
+      local_dream_url: "",
     });
     expect(wire.steps).toBe(20);
   });
@@ -84,9 +106,17 @@ describe("createParamsPayload.fromForm - 必发字段（永远不省）", () => 
   test("cfg 防御性 parseFloat", () => {
     const payload = createParamsPayload();
     const wire = payload.fromForm({
-      prompt: "x", negative_prompt: "",
-      size: 512, steps: 1, cfg: "7.5",
-      scheduler: "", karras: false, use_opencl: false, clip_skip: 1, seed: null, local_dream_url: "",
+      prompt: "x",
+      negative_prompt: "",
+      size: 512,
+      steps: 1,
+      cfg: "7.5",
+      scheduler: "",
+      karras: false,
+      use_opencl: false,
+      clip_skip: 1,
+      seed: null,
+      local_dream_url: "",
     });
     expect(wire.cfg).toBe(7.5);
   });
@@ -96,8 +126,17 @@ describe("createParamsPayload.fromForm - omitIf 规则", () => {
   test("scheduler 空字符串 → 省略", () => {
     const payload = createParamsPayload();
     const wire = payload.fromForm({
-      prompt: "x", negative_prompt: "", size: 512, steps: 1, cfg: 1,
-      scheduler: "", karras: false, use_opencl: false, clip_skip: 1, seed: null, local_dream_url: "",
+      prompt: "x",
+      negative_prompt: "",
+      size: 512,
+      steps: 1,
+      cfg: 1,
+      scheduler: "",
+      karras: false,
+      use_opencl: false,
+      clip_skip: 1,
+      seed: null,
+      local_dream_url: "",
     });
     expect("scheduler" in wire).toBe(false);
   });
@@ -105,8 +144,17 @@ describe("createParamsPayload.fromForm - omitIf 规则", () => {
   test("scheduler 有值 → 输出", () => {
     const payload = createParamsPayload();
     const wire = payload.fromForm({
-      prompt: "x", negative_prompt: "", size: 512, steps: 1, cfg: 1,
-      scheduler: "euler", karras: false, use_opencl: false, clip_skip: 1, seed: null, local_dream_url: "",
+      prompt: "x",
+      negative_prompt: "",
+      size: 512,
+      steps: 1,
+      cfg: 1,
+      scheduler: "euler",
+      karras: false,
+      use_opencl: false,
+      clip_skip: 1,
+      seed: null,
+      local_dream_url: "",
     });
     expect(wire.scheduler).toBe("euler");
   });
@@ -114,8 +162,17 @@ describe("createParamsPayload.fromForm - omitIf 规则", () => {
   test("karras=false → 省略", () => {
     const payload = createParamsPayload();
     const wire = payload.fromForm({
-      prompt: "x", negative_prompt: "", size: 512, steps: 1, cfg: 1,
-      scheduler: "", karras: false, use_opencl: false, clip_skip: 1, seed: null, local_dream_url: "",
+      prompt: "x",
+      negative_prompt: "",
+      size: 512,
+      steps: 1,
+      cfg: 1,
+      scheduler: "",
+      karras: false,
+      use_opencl: false,
+      clip_skip: 1,
+      seed: null,
+      local_dream_url: "",
     });
     expect("karras" in wire).toBe(false);
   });
@@ -123,8 +180,17 @@ describe("createParamsPayload.fromForm - omitIf 规则", () => {
   test("karras=true → 输出", () => {
     const payload = createParamsPayload();
     const wire = payload.fromForm({
-      prompt: "x", negative_prompt: "", size: 512, steps: 1, cfg: 1,
-      scheduler: "", karras: true, use_opencl: false, clip_skip: 1, seed: null, local_dream_url: "",
+      prompt: "x",
+      negative_prompt: "",
+      size: 512,
+      steps: 1,
+      cfg: 1,
+      scheduler: "",
+      karras: true,
+      use_opencl: false,
+      clip_skip: 1,
+      seed: null,
+      local_dream_url: "",
     });
     expect(wire.karras).toBe(true);
   });
@@ -132,8 +198,17 @@ describe("createParamsPayload.fromForm - omitIf 规则", () => {
   test("use_opencl=false → 省略", () => {
     const payload = createParamsPayload();
     const wire = payload.fromForm({
-      prompt: "x", negative_prompt: "", size: 512, steps: 1, cfg: 1,
-      scheduler: "", karras: false, use_opencl: false, clip_skip: 1, seed: null, local_dream_url: "",
+      prompt: "x",
+      negative_prompt: "",
+      size: 512,
+      steps: 1,
+      cfg: 1,
+      scheduler: "",
+      karras: false,
+      use_opencl: false,
+      clip_skip: 1,
+      seed: null,
+      local_dream_url: "",
     });
     expect("use_opencl" in wire).toBe(false);
   });
@@ -141,8 +216,17 @@ describe("createParamsPayload.fromForm - omitIf 规则", () => {
   test("use_opencl=true → 输出", () => {
     const payload = createParamsPayload();
     const wire = payload.fromForm({
-      prompt: "x", negative_prompt: "", size: 512, steps: 1, cfg: 1,
-      scheduler: "", karras: false, use_opencl: true, clip_skip: 1, seed: null, local_dream_url: "",
+      prompt: "x",
+      negative_prompt: "",
+      size: 512,
+      steps: 1,
+      cfg: 1,
+      scheduler: "",
+      karras: false,
+      use_opencl: true,
+      clip_skip: 1,
+      seed: null,
+      local_dream_url: "",
     });
     expect(wire.use_opencl).toBe(true);
   });
@@ -150,8 +234,17 @@ describe("createParamsPayload.fromForm - omitIf 规则", () => {
   test("clip_skip=1 → 省略（不 >1）", () => {
     const payload = createParamsPayload();
     const wire = payload.fromForm({
-      prompt: "x", negative_prompt: "", size: 512, steps: 1, cfg: 1,
-      scheduler: "", karras: false, use_opencl: false, clip_skip: 1, seed: null, local_dream_url: "",
+      prompt: "x",
+      negative_prompt: "",
+      size: 512,
+      steps: 1,
+      cfg: 1,
+      scheduler: "",
+      karras: false,
+      use_opencl: false,
+      clip_skip: 1,
+      seed: null,
+      local_dream_url: "",
     });
     expect("clip_skip" in wire).toBe(false);
   });
@@ -159,8 +252,17 @@ describe("createParamsPayload.fromForm - omitIf 规则", () => {
   test("clip_skip=2 → 输出", () => {
     const payload = createParamsPayload();
     const wire = payload.fromForm({
-      prompt: "x", negative_prompt: "", size: 512, steps: 1, cfg: 1,
-      scheduler: "", karras: false, use_opencl: false, clip_skip: 2, seed: null, local_dream_url: "",
+      prompt: "x",
+      negative_prompt: "",
+      size: 512,
+      steps: 1,
+      cfg: 1,
+      scheduler: "",
+      karras: false,
+      use_opencl: false,
+      clip_skip: 2,
+      seed: null,
+      local_dream_url: "",
     });
     expect(wire.clip_skip).toBe(2);
   });
@@ -168,8 +270,17 @@ describe("createParamsPayload.fromForm - omitIf 规则", () => {
   test("clip_skip=1.5（非整数）→ 省略", () => {
     const payload = createParamsPayload();
     const wire = payload.fromForm({
-      prompt: "x", negative_prompt: "", size: 512, steps: 1, cfg: 1,
-      scheduler: "", karras: false, use_opencl: false, clip_skip: 1.5, seed: null, local_dream_url: "",
+      prompt: "x",
+      negative_prompt: "",
+      size: 512,
+      steps: 1,
+      cfg: 1,
+      scheduler: "",
+      karras: false,
+      use_opencl: false,
+      clip_skip: 1.5,
+      seed: null,
+      local_dream_url: "",
     });
     expect("clip_skip" in wire).toBe(false);
   });
@@ -177,8 +288,17 @@ describe("createParamsPayload.fromForm - omitIf 规则", () => {
   test("seed=null（seedRandom checked）→ 省略", () => {
     const payload = createParamsPayload();
     const wire = payload.fromForm({
-      prompt: "x", negative_prompt: "", size: 512, steps: 1, cfg: 1,
-      scheduler: "", karras: false, use_opencl: false, clip_skip: 1, seed: null, local_dream_url: "",
+      prompt: "x",
+      negative_prompt: "",
+      size: 512,
+      steps: 1,
+      cfg: 1,
+      scheduler: "",
+      karras: false,
+      use_opencl: false,
+      clip_skip: 1,
+      seed: null,
+      local_dream_url: "",
     });
     expect("seed" in wire).toBe(false);
   });
@@ -186,8 +306,17 @@ describe("createParamsPayload.fromForm - omitIf 规则", () => {
   test("seed=42 → 输出", () => {
     const payload = createParamsPayload();
     const wire = payload.fromForm({
-      prompt: "x", negative_prompt: "", size: 512, steps: 1, cfg: 1,
-      scheduler: "", karras: false, use_opencl: false, clip_skip: 1, seed: 42, local_dream_url: "",
+      prompt: "x",
+      negative_prompt: "",
+      size: 512,
+      steps: 1,
+      cfg: 1,
+      scheduler: "",
+      karras: false,
+      use_opencl: false,
+      clip_skip: 1,
+      seed: 42,
+      local_dream_url: "",
     });
     expect(wire.seed).toBe(42);
   });
@@ -195,8 +324,17 @@ describe("createParamsPayload.fromForm - omitIf 规则", () => {
   test("local_dream_url 空字符串 → 省略", () => {
     const payload = createParamsPayload();
     const wire = payload.fromForm({
-      prompt: "x", negative_prompt: "", size: 512, steps: 1, cfg: 1,
-      scheduler: "", karras: false, use_opencl: false, clip_skip: 1, seed: null, local_dream_url: "",
+      prompt: "x",
+      negative_prompt: "",
+      size: 512,
+      steps: 1,
+      cfg: 1,
+      scheduler: "",
+      karras: false,
+      use_opencl: false,
+      clip_skip: 1,
+      seed: null,
+      local_dream_url: "",
     });
     expect("local_dream_url" in wire).toBe(false);
   });
@@ -204,8 +342,16 @@ describe("createParamsPayload.fromForm - omitIf 规则", () => {
   test("local_dream_url='127.0.0.1:8081'（无 http）→ 加 http:// 前缀", () => {
     const payload = createParamsPayload();
     const wire = payload.fromForm({
-      prompt: "x", negative_prompt: "", size: 512, steps: 1, cfg: 1,
-      scheduler: "", karras: false, use_opencl: false, clip_skip: 1, seed: null,
+      prompt: "x",
+      negative_prompt: "",
+      size: 512,
+      steps: 1,
+      cfg: 1,
+      scheduler: "",
+      karras: false,
+      use_opencl: false,
+      clip_skip: 1,
+      seed: null,
       local_dream_url: "127.0.0.1:8081",
     });
     expect(wire.local_dream_url).toBe("http://127.0.0.1:8081");
@@ -214,8 +360,16 @@ describe("createParamsPayload.fromForm - omitIf 规则", () => {
   test("local_dream_url='http://x:8081'（已有 http）→ 不重复加", () => {
     const payload = createParamsPayload();
     const wire = payload.fromForm({
-      prompt: "x", negative_prompt: "", size: 512, steps: 1, cfg: 1,
-      scheduler: "", karras: false, use_opencl: false, clip_skip: 1, seed: null,
+      prompt: "x",
+      negative_prompt: "",
+      size: 512,
+      steps: 1,
+      cfg: 1,
+      scheduler: "",
+      karras: false,
+      use_opencl: false,
+      clip_skip: 1,
+      seed: null,
       local_dream_url: "http://x:8081",
     });
     expect(wire.local_dream_url).toBe("http://x:8081");
@@ -224,11 +378,171 @@ describe("createParamsPayload.fromForm - omitIf 规则", () => {
   test("local_dream_url='  127.0.0.1  '（前后空格）→ trim 后加 http", () => {
     const payload = createParamsPayload();
     const wire = payload.fromForm({
-      prompt: "x", negative_prompt: "", size: 512, steps: 1, cfg: 1,
-      scheduler: "", karras: false, use_opencl: false, clip_skip: 1, seed: null,
+      prompt: "x",
+      negative_prompt: "",
+      size: 512,
+      steps: 1,
+      cfg: 1,
+      scheduler: "",
+      karras: false,
+      use_opencl: false,
+      clip_skip: 1,
+      seed: null,
       local_dream_url: "  127.0.0.1  ",
     });
     expect(wire.local_dream_url).toBe("http://127.0.0.1");
+  });
+
+  test("aspect_ratio 'none' → 省略", () => {
+    const payload = createParamsPayload();
+    const wire = payload.fromForm({
+      prompt: "x",
+      negative_prompt: "",
+      size: 512,
+      steps: 1,
+      cfg: 1,
+      scheduler: "",
+      karras: false,
+      use_opencl: false,
+      clip_skip: 1,
+      seed: null,
+      local_dream_url: "",
+      aspect_ratio: "none",
+    });
+    expect("aspect_ratio" in wire).toBe(false);
+  });
+
+  test("aspect_ratio '16:9' → 输出", () => {
+    const payload = createParamsPayload();
+    const wire = payload.fromForm({
+      prompt: "x",
+      negative_prompt: "",
+      size: 512,
+      steps: 1,
+      cfg: 1,
+      scheduler: "",
+      karras: false,
+      use_opencl: false,
+      clip_skip: 1,
+      seed: null,
+      local_dream_url: "",
+      aspect_ratio: "16:9",
+    });
+    expect(wire.aspect_ratio).toBe("16:9");
+  });
+
+  test("output_format '' → 省略", () => {
+    const payload = createParamsPayload();
+    const wire = payload.fromForm({
+      prompt: "x",
+      negative_prompt: "",
+      size: 512,
+      steps: 1,
+      cfg: 1,
+      scheduler: "",
+      karras: false,
+      use_opencl: false,
+      clip_skip: 1,
+      seed: null,
+      local_dream_url: "",
+      output_format: "",
+    });
+    expect("output_format" in wire).toBe(false);
+  });
+
+  test("output_format 'jpeg' → 输出", () => {
+    const payload = createParamsPayload();
+    const wire = payload.fromForm({
+      prompt: "x",
+      negative_prompt: "",
+      size: 512,
+      steps: 1,
+      cfg: 1,
+      scheduler: "",
+      karras: false,
+      use_opencl: false,
+      clip_skip: 1,
+      seed: null,
+      local_dream_url: "",
+      output_format: "jpeg",
+    });
+    expect(wire.output_format).toBe("jpeg");
+  });
+
+  test("preview_format '' → 省略", () => {
+    const payload = createParamsPayload();
+    const wire = payload.fromForm({
+      prompt: "x",
+      negative_prompt: "",
+      size: 512,
+      steps: 1,
+      cfg: 1,
+      scheduler: "",
+      karras: false,
+      use_opencl: false,
+      clip_skip: 1,
+      seed: null,
+      local_dream_url: "",
+      preview_format: "",
+    });
+    expect("preview_format" in wire).toBe(false);
+  });
+
+  test("preview_format 'jpeg' → 输出", () => {
+    const payload = createParamsPayload();
+    const wire = payload.fromForm({
+      prompt: "x",
+      negative_prompt: "",
+      size: 512,
+      steps: 1,
+      cfg: 1,
+      scheduler: "",
+      karras: false,
+      use_opencl: false,
+      clip_skip: 1,
+      seed: null,
+      local_dream_url: "",
+      preview_format: "jpeg",
+    });
+    expect(wire.preview_format).toBe("jpeg");
+  });
+
+  test("show_diffusion_stride < 1 → 省略", () => {
+    const payload = createParamsPayload();
+    const wire = payload.fromForm({
+      prompt: "x",
+      negative_prompt: "",
+      size: 512,
+      steps: 1,
+      cfg: 1,
+      scheduler: "",
+      karras: false,
+      use_opencl: false,
+      clip_skip: 1,
+      seed: null,
+      local_dream_url: "",
+      show_diffusion_stride: 0,
+    });
+    expect("show_diffusion_stride" in wire).toBe(false);
+  });
+
+  test("show_diffusion_stride 2 → 输出整数", () => {
+    const payload = createParamsPayload();
+    const wire = payload.fromForm({
+      prompt: "x",
+      negative_prompt: "",
+      size: 512,
+      steps: 1,
+      cfg: 1,
+      scheduler: "",
+      karras: false,
+      use_opencl: false,
+      clip_skip: 1,
+      seed: null,
+      local_dream_url: "",
+      show_diffusion_stride: "2",
+    });
+    expect(wire.show_diffusion_stride).toBe(2);
   });
 });
 
@@ -246,6 +560,10 @@ describe("createParamsPayload.fromForm - presetMode 白名单", () => {
       clip_skip: 2,
       denoise_strength: 0.5,
       mode: "img2img",
+      // 新字段应进 preset
+      aspect_ratio: "16:9",
+      output_format: "jpeg",
+      preview_format: "jpeg",
       // 不该进 preset
       seed: 42,
       use_opencl: true,
@@ -255,17 +573,28 @@ describe("createParamsPayload.fromForm - presetMode 白名单", () => {
     expect("seed" in wire).toBe(false);
     expect("use_opencl" in wire).toBe(false);
     expect("local_dream_url" in wire).toBe(false);
+    expect(wire.aspect_ratio).toBe("16:9");
+    expect(wire.output_format).toBe("jpeg");
+    expect(wire.preview_format).toBe("jpeg");
   });
 
   test("presetMode=true → 白名单字段被输出（即使本身会被默认 omitIf 省略）", () => {
     // 例如 scheduler 空字符串默认省，但 preset 仍要保留（preset 维度）
     const payload = createParamsPayload();
     const snap = {
-      prompt: "x", negative_prompt: "", size: 512, steps: 1, cfg: 1,
+      prompt: "x",
+      negative_prompt: "",
+      size: 512,
+      steps: 1,
+      cfg: 1,
       scheduler: "", // 默认会省
-      karras: false, clip_skip: 1, // 默认会省
-      denoise_strength: 0.5, mode: "txt2img",
-      seed: null, use_opencl: false, local_dream_url: "",
+      karras: false,
+      clip_skip: 1, // 默认会省
+      denoise_strength: 0.5,
+      mode: "txt2img",
+      seed: null,
+      use_opencl: false,
+      local_dream_url: "",
     };
     const wire = payload.fromForm(snap, { presetMode: true });
     expect("scheduler" in wire).toBe(true);
@@ -278,11 +607,24 @@ describe("createParamsPayload.fromForm - presetMode 白名单", () => {
 
   test("presetMode=true → denoise_strength 和 mode 出现在输出", () => {
     const payload = createParamsPayload();
-    const wire = payload.fromForm({
-      prompt: "x", negative_prompt: "", size: 512, steps: 1, cfg: 1,
-      scheduler: "", karras: false, use_opencl: false, clip_skip: 1, seed: null, local_dream_url: "",
-      denoise_strength: 0.75, mode: "img2img",
-    }, { presetMode: true });
+    const wire = payload.fromForm(
+      {
+        prompt: "x",
+        negative_prompt: "",
+        size: 512,
+        steps: 1,
+        cfg: 1,
+        scheduler: "",
+        karras: false,
+        use_opencl: false,
+        clip_skip: 1,
+        seed: null,
+        local_dream_url: "",
+        denoise_strength: 0.75,
+        mode: "img2img",
+      },
+      { presetMode: true },
+    );
     expect(wire.denoise_strength).toBe(0.75);
     expect(wire.mode).toBe("img2img");
   });
@@ -291,21 +633,47 @@ describe("createParamsPayload.fromForm - presetMode 白名单", () => {
   // 不能因为 DEFAULT_RULES 没键就兜底透传。
   test("presetMode + denoise_strength 字符串 '0.5' → 输出 0.5（parseFloat 生效）", () => {
     const payload = createParamsPayload();
-    const wire = payload.fromForm({
-      prompt: "x", negative_prompt: "", size: 512, steps: 1, cfg: 1,
-      scheduler: "", karras: false, use_opencl: false, clip_skip: 1, seed: null, local_dream_url: "",
-      denoise_strength: "0.5", mode: "img2img",
-    }, { presetMode: true });
+    const wire = payload.fromForm(
+      {
+        prompt: "x",
+        negative_prompt: "",
+        size: 512,
+        steps: 1,
+        cfg: 1,
+        scheduler: "",
+        karras: false,
+        use_opencl: false,
+        clip_skip: 1,
+        seed: null,
+        local_dream_url: "",
+        denoise_strength: "0.5",
+        mode: "img2img",
+      },
+      { presetMode: true },
+    );
     expect(wire.denoise_strength).toBe(0.5);
   });
 
   test("presetMode + mode 数字 42 → 输出字符串 '42'（String 转换生效）", () => {
     const payload = createParamsPayload();
-    const wire = payload.fromForm({
-      prompt: "x", negative_prompt: "", size: 512, steps: 1, cfg: 1,
-      scheduler: "", karras: false, use_opencl: false, clip_skip: 1, seed: null, local_dream_url: "",
-      denoise_strength: 0.5, mode: 42,
-    }, { presetMode: true });
+    const wire = payload.fromForm(
+      {
+        prompt: "x",
+        negative_prompt: "",
+        size: 512,
+        steps: 1,
+        cfg: 1,
+        scheduler: "",
+        karras: false,
+        use_opencl: false,
+        clip_skip: 1,
+        seed: null,
+        local_dream_url: "",
+        denoise_strength: 0.5,
+        mode: 42,
+      },
+      { presetMode: true },
+    );
     expect(wire.mode).toBe("42");
   });
 });
@@ -314,8 +682,16 @@ describe("createParamsPayload - 纯函数性", () => {
   test("同输入 → 同输出（无 module-level mutable state）", () => {
     const payload = createParamsPayload();
     const snap = {
-      prompt: "x", negative_prompt: "", size: 512, steps: 1, cfg: 1,
-      scheduler: "euler", karras: true, use_opencl: true, clip_skip: 2, seed: 5,
+      prompt: "x",
+      negative_prompt: "",
+      size: 512,
+      steps: 1,
+      cfg: 1,
+      scheduler: "euler",
+      karras: true,
+      use_opencl: true,
+      clip_skip: 2,
+      seed: 5,
       local_dream_url: "http://x:8081",
     };
     const a = payload.fromForm(snap);

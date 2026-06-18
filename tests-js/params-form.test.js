@@ -20,19 +20,50 @@ import { createParamsForm } from "../static/params.js";
 // 模拟 DOM 元素的最常用属性，让工厂函数不报错。
 function makeMocks(overrides = {}) {
   const base = {
-    prompt: { value: "", addEventListener: () => {}, dispatchEvent: () => {}, style: {}, scrollHeight: 0 },
-    negPrompt: { value: "", addEventListener: () => {}, dispatchEvent: () => {}, style: {}, scrollHeight: 0 },
+    prompt: {
+      value: "",
+      addEventListener: () => {},
+      dispatchEvent: () => {},
+      style: {},
+      scrollHeight: 0,
+    },
+    negPrompt: {
+      value: "",
+      addEventListener: () => {},
+      dispatchEvent: () => {},
+      style: {},
+      scrollHeight: 0,
+    },
     size: { value: "512", addEventListener: () => {}, dispatchEvent: () => {} },
-    sizeCustom: { value: "448", addEventListener: () => {}, dispatchEvent: () => {}, classList: { toggle: () => {}, add: () => {}, remove: () => {}, contains: () => false } },
+    sizeCustom: {
+      value: "448",
+      addEventListener: () => {},
+      dispatchEvent: () => {},
+      classList: { toggle: () => {}, add: () => {}, remove: () => {}, contains: () => false },
+    },
     steps: { value: "20", addEventListener: () => {}, dispatchEvent: () => {} },
     cfg: { value: "7.0", addEventListener: () => {}, dispatchEvent: () => {} },
     scheduler: { value: "", addEventListener: () => {}, dispatchEvent: () => {} },
     karras: { value: false, checked: false, addEventListener: () => {}, dispatchEvent: () => {} },
-    useOpenCL: { value: false, checked: false, addEventListener: () => {}, dispatchEvent: () => {} },
+    useOpenCL: {
+      value: false,
+      checked: false,
+      addEventListener: () => {},
+      dispatchEvent: () => {},
+    },
     clipSkip: { value: "1", addEventListener: () => {}, dispatchEvent: () => {} },
-    seed: { value: "10", addEventListener: () => {}, dispatchEvent: () => {}, classList: { toggle: () => {}, add: () => {}, remove: () => {}, contains: () => false } },
+    seed: {
+      value: "10",
+      addEventListener: () => {},
+      dispatchEvent: () => {},
+      classList: { toggle: () => {}, add: () => {}, remove: () => {}, contains: () => false },
+    },
     seedRandom: { value: true, checked: true, addEventListener: () => {}, dispatchEvent: () => {} },
     ldUrl: { value: "", addEventListener: () => {}, dispatchEvent: () => {} },
+    aspectRatio: { value: "none", addEventListener: () => {}, dispatchEvent: () => {} },
+    outputFormat: { value: "", addEventListener: () => {}, dispatchEvent: () => {} },
+    previewFormat: { value: "", addEventListener: () => {}, dispatchEvent: () => {} },
+    showDiffusionStride: { value: "1", addEventListener: () => {}, dispatchEvent: () => {} },
     // 联动显示标签
     stepsVal: { textContent: "", addEventListener: () => {}, dispatchEvent: () => {} },
     cfgVal: { textContent: "", addEventListener: () => {}, dispatchEvent: () => {} },
@@ -43,21 +74,25 @@ function makeMocks(overrides = {}) {
 }
 
 describe("createParamsForm - read", () => {
-  test("返回 11 个键（snake_case, 包含空值/默认值，不省略）", () => {
+  test("返回 15 个键（snake_case, 包含空值/默认值，不省略）", () => {
     const mocks = makeMocks();
     const $ = (id) => mocks[id];
     const form = createParamsForm({ $ });
 
     const snap = form.read();
     expect(Object.keys(snap).sort()).toEqual([
+      "aspect_ratio",
       "cfg",
       "clip_skip",
       "karras",
       "local_dream_url",
       "negative_prompt",
+      "output_format",
+      "preview_format",
       "prompt",
       "scheduler",
       "seed",
+      "show_diffusion_stride",
       "size",
       "steps",
       "use_opencl",
@@ -74,7 +109,9 @@ describe("createParamsForm - read", () => {
   });
 
   test("size: select 走 preset（512）→ 整数 512", () => {
-    const mocks = makeMocks({ size: { value: "512", addEventListener: () => {}, dispatchEvent: () => {} } });
+    const mocks = makeMocks({
+      size: { value: "512", addEventListener: () => {}, dispatchEvent: () => {} },
+    });
     const form = createParamsForm({ $: (id) => mocks[id] });
 
     expect(form.read().size).toBe(512);
@@ -101,7 +138,9 @@ describe("createParamsForm - read", () => {
   });
 
   test("seed: seedRandom.checked=true → null", () => {
-    const mocks = makeMocks({ seedRandom: { checked: true, addEventListener: () => {}, dispatchEvent: () => {} } });
+    const mocks = makeMocks({
+      seedRandom: { checked: true, addEventListener: () => {}, dispatchEvent: () => {} },
+    });
     const form = createParamsForm({ $: (id) => mocks[id] });
 
     expect(form.read().seed).toBeNull();
@@ -143,8 +182,20 @@ describe("createParamsForm - read", () => {
 
   test("textarea 字段 (prompt/negative_prompt) read 返原始字符串", () => {
     const mocks = makeMocks({
-      prompt: { value: "  hello  ", addEventListener: () => {}, dispatchEvent: () => {}, style: {}, scrollHeight: 0 },
-      negPrompt: { value: "ugly", addEventListener: () => {}, dispatchEvent: () => {}, style: {}, scrollHeight: 0 },
+      prompt: {
+        value: "  hello  ",
+        addEventListener: () => {},
+        dispatchEvent: () => {},
+        style: {},
+        scrollHeight: 0,
+      },
+      negPrompt: {
+        value: "ugly",
+        addEventListener: () => {},
+        dispatchEvent: () => {},
+        style: {},
+        scrollHeight: 0,
+      },
     });
     const form = createParamsForm({ $: (id) => mocks[id] });
 
@@ -155,7 +206,9 @@ describe("createParamsForm - read", () => {
   });
 
   test("local_dream_url read 透传字符串（不加 http）", () => {
-    const mocks = makeMocks({ ldUrl: { value: "127.0.0.1:8081", addEventListener: () => {}, dispatchEvent: () => {} } });
+    const mocks = makeMocks({
+      ldUrl: { value: "127.0.0.1:8081", addEventListener: () => {}, dispatchEvent: () => {} },
+    });
     const form = createParamsForm({ $: (id) => mocks[id] });
 
     expect(form.read().local_dream_url).toBe("127.0.0.1:8081");
@@ -163,7 +216,7 @@ describe("createParamsForm - read", () => {
 });
 
 describe("createParamsForm - apply", () => {
-  test("写全部 11 个控件值", () => {
+  test("写全部 15 个控件值", () => {
     const mocks = makeMocks();
     const form = createParamsForm({ $: (id) => mocks[id] });
 
@@ -179,6 +232,10 @@ describe("createParamsForm - apply", () => {
       clip_skip: 2,
       seed: 123,
       local_dream_url: "http://localhost:8081",
+      aspect_ratio: "16:9",
+      output_format: "jpeg",
+      preview_format: "jpeg",
+      show_diffusion_stride: 2,
     });
 
     expect(mocks.prompt.value).toBe("a cat");
@@ -192,13 +249,29 @@ describe("createParamsForm - apply", () => {
     expect(mocks.clipSkip.value).toBe("2");
     expect(mocks.seed.value).toBe("123");
     expect(mocks.ldUrl.value).toBe("http://localhost:8081");
+    expect(mocks.aspectRatio.value).toBe("16:9");
+    expect(mocks.outputFormat.value).toBe("jpeg");
+    expect(mocks.previewFormat.value).toBe("jpeg");
+    expect(mocks.showDiffusionStride.value).toBe("2");
   });
 
   test("size=512 (preset) → size.value=512 不动 sizeCustom", () => {
     const mocks = makeMocks();
     const form = createParamsForm({ $: (id) => mocks[id] });
 
-    form.apply({ size: 512, prompt: "", negative_prompt: "", steps: 1, cfg: 1, scheduler: "", karras: false, use_opencl: false, clip_skip: 1, seed: null, local_dream_url: "" });
+    form.apply({
+      size: 512,
+      prompt: "",
+      negative_prompt: "",
+      steps: 1,
+      cfg: 1,
+      scheduler: "",
+      karras: false,
+      use_opencl: false,
+      clip_skip: 1,
+      seed: null,
+      local_dream_url: "",
+    });
 
     expect(mocks.size.value).toBe("512");
     expect(mocks.sizeCustom.value).toBe("448"); // 未变
@@ -208,7 +281,19 @@ describe("createParamsForm - apply", () => {
     const mocks = makeMocks();
     const form = createParamsForm({ $: (id) => mocks[id] });
 
-    form.apply({ size: 448, prompt: "", negative_prompt: "", steps: 1, cfg: 1, scheduler: "", karras: false, use_opencl: false, clip_skip: 1, seed: null, local_dream_url: "" });
+    form.apply({
+      size: 448,
+      prompt: "",
+      negative_prompt: "",
+      steps: 1,
+      cfg: 1,
+      scheduler: "",
+      karras: false,
+      use_opencl: false,
+      clip_skip: 1,
+      seed: null,
+      local_dream_url: "",
+    });
 
     expect(mocks.size.value).toBe("custom");
     expect(mocks.sizeCustom.value).toBe("448");
@@ -220,7 +305,19 @@ describe("createParamsForm - apply", () => {
     mocks.size.dispatchEvent = (ev) => dispatches.push(ev.type);
     const form = createParamsForm({ $: (id) => mocks[id] });
 
-    form.apply({ size: 448, prompt: "", negative_prompt: "", steps: 1, cfg: 1, scheduler: "", karras: false, use_opencl: false, clip_skip: 1, seed: null, local_dream_url: "" });
+    form.apply({
+      size: 448,
+      prompt: "",
+      negative_prompt: "",
+      steps: 1,
+      cfg: 1,
+      scheduler: "",
+      karras: false,
+      use_opencl: false,
+      clip_skip: 1,
+      seed: null,
+      local_dream_url: "",
+    });
 
     expect(dispatches).toContain("change");
   });
@@ -232,7 +329,19 @@ describe("createParamsForm - apply", () => {
     mocks.negPrompt.dispatchEvent = (ev) => dispatches.push(["negPrompt", ev.type]);
     const form = createParamsForm({ $: (id) => mocks[id] });
 
-    form.apply({ size: 512, prompt: "x", negative_prompt: "y", steps: 1, cfg: 1, scheduler: "", karras: false, use_opencl: false, clip_skip: 1, seed: null, local_dream_url: "" });
+    form.apply({
+      size: 512,
+      prompt: "x",
+      negative_prompt: "y",
+      steps: 1,
+      cfg: 1,
+      scheduler: "",
+      karras: false,
+      use_opencl: false,
+      clip_skip: 1,
+      seed: null,
+      local_dream_url: "",
+    });
 
     expect(dispatches).toContainEqual(["prompt", "input"]);
     expect(dispatches).toContainEqual(["negPrompt", "input"]);
@@ -244,7 +353,19 @@ describe("createParamsForm - apply", () => {
     mocks.scheduler.dispatchEvent = (ev) => dispatches.push(ev.type);
     const form = createParamsForm({ $: (id) => mocks[id] });
 
-    form.apply({ size: 512, prompt: "", negative_prompt: "", steps: 1, cfg: 1, scheduler: "euler", karras: false, use_opencl: false, clip_skip: 1, seed: null, local_dream_url: "" });
+    form.apply({
+      size: 512,
+      prompt: "",
+      negative_prompt: "",
+      steps: 1,
+      cfg: 1,
+      scheduler: "euler",
+      karras: false,
+      use_opencl: false,
+      clip_skip: 1,
+      seed: null,
+      local_dream_url: "",
+    });
 
     expect(dispatches).toContain("change");
   });
@@ -259,7 +380,19 @@ describe("createParamsForm - apply", () => {
 
     // 模拟从 null 切到具体数值（或反向）：apply 写 seed 后
     // 应触发 seedRandom 的 change 事件，bind 阶段装的监听器据此切可见性。
-    form.apply({ size: 512, prompt: "", negative_prompt: "", steps: 1, cfg: 1, scheduler: "", karras: false, use_opencl: false, clip_skip: 1, seed: 42, local_dream_url: "" });
+    form.apply({
+      size: 512,
+      prompt: "",
+      negative_prompt: "",
+      steps: 1,
+      cfg: 1,
+      scheduler: "",
+      karras: false,
+      use_opencl: false,
+      clip_skip: 1,
+      seed: 42,
+      local_dream_url: "",
+    });
 
     expect(dispatches).toContain("change");
   });
@@ -269,7 +402,18 @@ describe("createParamsForm - apply", () => {
     const form = createParamsForm({ $: (id) => mocks[id] });
 
     // size 故意省略（undefined）
-    form.apply({ prompt: "x", negative_prompt: "y", steps: 1, cfg: 1, scheduler: "", karras: false, use_opencl: false, clip_skip: 1, seed: null, local_dream_url: "" });
+    form.apply({
+      prompt: "x",
+      negative_prompt: "y",
+      steps: 1,
+      cfg: 1,
+      scheduler: "",
+      karras: false,
+      use_opencl: false,
+      clip_skip: 1,
+      seed: null,
+      local_dream_url: "",
+    });
 
     // size.value 保持原值不变
     expect(mocks.size.value).toBe("512");
@@ -291,7 +435,9 @@ describe("createParamsForm - bind", () => {
 
     // 执行 change 监听器 → 触发 sizeCustom.classList.toggle('collapsed', size.value !== 'custom')
     let toggled = null;
-    mocks.sizeCustom.classList.toggle = (cls, force) => { toggled = [cls, force]; };
+    mocks.sizeCustom.classList.toggle = (cls, force) => {
+      toggled = [cls, force];
+    };
     mocks.size.value = "custom";
     sizeChange[2](); // 调监听器
     expect(toggled).toEqual(["collapsed", false]);
@@ -313,7 +459,9 @@ describe("createParamsForm - bind", () => {
     expect(seedRandomChange).toBeDefined();
 
     let toggled = null;
-    mocks.seed.classList.toggle = (cls, force) => { toggled = [cls, force]; };
+    mocks.seed.classList.toggle = (cls, force) => {
+      toggled = [cls, force];
+    };
     mocks.seedRandom.checked = true;
     seedRandomChange[2]();
     expect(toggled).toEqual(["hidden", true]);
@@ -329,7 +477,10 @@ describe("createParamsForm - bind", () => {
     // 捕获所有 addEventListener 调用
     for (const id of Object.keys(mocks)) {
       const orig = mocks[id].addEventListener;
-      mocks[id].addEventListener = (ev, fn) => { listeners.push([id, ev, fn]); return orig.call(mocks[id], ev, fn); };
+      mocks[id].addEventListener = (ev, fn) => {
+        listeners.push([id, ev, fn]);
+        return orig.call(mocks[id], ev, fn);
+      };
     }
     const form = createParamsForm({ $: (id) => mocks[id] });
 
@@ -349,7 +500,10 @@ describe("createParamsForm - bind", () => {
     const mocks = makeMocks();
     for (const id of Object.keys(mocks)) {
       const orig = mocks[id].addEventListener;
-      mocks[id].addEventListener = (ev, fn) => { listeners.push([id, ev, fn]); return orig.call(mocks[id], ev, fn); };
+      mocks[id].addEventListener = (ev, fn) => {
+        listeners.push([id, ev, fn]);
+        return orig.call(mocks[id], ev, fn);
+      };
     }
     const form = createParamsForm({ $: (id) => mocks[id] });
 

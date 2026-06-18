@@ -1,0 +1,66 @@
+target-version = "py310"
+line-length = 100
+
+[format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
+
+[lint]
+select = [
+  "E",   # pycodestyle errors
+  "W",   # pycodestyle warnings
+  "F",   # pyflakes
+  "I",   # isort
+  "N",   # pep8-naming
+  "UP",  # pyupgrade
+  "YTT", # flake8-2020
+  "ANN", # annotations
+  "ASYNC", # flake8-async
+  "B",   # flake8-bugbear
+  "COM", # flake8-commas
+  "C4",  # flake8-comprehensions
+  "DTZ", # flake8-datetimez
+  "T10", # flake8-debugger
+  "EM",  # flake8-errmsg
+  "ISC", # flake8-implicit-str-concat
+  "G",   # flake8-logging-format
+  "LOG", # flake8-logging
+  "PIE", # flake8-pie
+  "T20", # flake8-print
+  "PYI", # flake8-pyi
+  "PT",  # flake8-pytest-style
+  "RSE", # flake8-raise
+  "RET", # flake8-return
+  "SLF", # flake8-self
+  "SLOT",# flake8-slots
+  "SIM", # flake8-simplify
+  "TID", # flake8-tidy-imports
+  "INT", # flake8-gettext
+  "ARG", # flake8-unused-arguments
+  "PTH", # flake8-use-pathlib
+  "TD",  # flake8-todos
+  "FBT", # flake8-boolean-trap
+  "RUF", # Ruff-specific
+]
+
+ignore = [
+  "ANN101", # missing-type-self (unnecessary with PEP 673)
+  "ANN102", # missing-type-cls
+  "ANN401", # dynamically-typed-expression
+  "COM812", # missing-trailing-comma (handled by formatter)
+  "ISC001", # single-line-implicit-string-concatenation (handled by formatter)
+  "PLE0604", # invalid-object-in-__slots__
+  "RUF002", # ambiguous-unicode-character (Chinese fullwidth punctuation in docstrings is intentional)
+  "RUF003", # comment-ambiguous-unicode-character
+]
+
+[lint.per-file-ignores]
+"tests/*" = ["ANN", "D", "ARG", "T20", "PT013"]
+"app.py" = ["ANN"]
+
+[lint.pydocstyle]
+convention = "google"
+
+[lint.isort]
+known-first-party = ["app", "sse"]

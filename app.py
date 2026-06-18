@@ -1,9 +1,12 @@
 import base64
+import io
 import json
 import os
+from pathlib import Path
 
 import requests
 from flask import Flask, Response, jsonify, render_template, request, stream_with_context
+from PIL import Image
 
 from sse import EVENT_HANDLERS, parse_sse, passthrough
 
@@ -98,14 +101,14 @@ class HFAutomask:
         resp.raise_for_status()
         return resp.json()
 
+
 # Load HF_TOKEN from .env if present (not committed)
-_env = os.path.join(os.path.dirname(__file__), ".env")
-if os.path.exists(_env):
-    with open(_env) as _f:
-        for _l in _f:
-            if "=" in _l and not _l.startswith("#"):
-                _k, _v = _l.strip().split("=", 1)
-                os.environ.setdefault(_k.strip(), _v.strip())
+_env_path = Path(__file__).parent / ".env"
+if _env_path.exists():
+    for _line in _env_path.read_text().splitlines():
+        if "=" in _line and not _line.startswith("#"):
+            _k, _v = _line.strip().split("=", 1)
+            os.environ.setdefault(_k.strip(), _v.strip())
 
 
 @app.route("/")
@@ -117,7 +120,7 @@ def index():
 def health():
     url = resolve_ld_url(request.args.get("url"))
     try:
-        r = requests.get(f"{url}/", timeout=2)
+        requests.get(f"{url}/", timeout=2)
         return jsonify({"ok": True})
     except Exception:
         return jsonify({"ok": False, "error": "Local Dream not reachable"}), 503
@@ -130,6 +133,94 @@ def automask():
     try:
         result = HFAutomask(token).segment(base64.b64decode(body.get("image", "")))
         return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 502
+
+
+@app.route("/tokenize", methods=["POST"])
+def tokenize():
+    """代理 POST /tokenize → Local Dream 的 /tokenize 端点。
+
+    接受 JSON body：{"prompt": "text"}
+    返回 token 计数：{"count": n, "max_length": 77, "overflow_offset": ...}
+    """
+    url = resolve_ld_url(request.json.get("local_dream_url", None) if request.json else None)
+    try:
+        body = request.json or {}
+        body.pop("local_dream_url", None)
+        r = requests.post(f"{url}/tokenize", json=body, timeout=10)
+        return jsonify(r.json()), r.status_code
+    except requests.exceptions.ConnectionError:
+        return jsonify({"error": "Cannot connect to Local Dream"}), 502
+    except Exception as e:
+        return jsonify({"error": str(e)}), 502
+
+
+@app.route("/upscale", methods=["POST"])
+def upscale():
+    """代理 POST /upscale → Local Dream 的 /upscale 端点。
+
+    接受两种输入格式：
+    - JSON body: {"image": "base64_png", "width": N, "height": N, "upscaler_path": "...", ...}
+    - multipart/form-data: image file + width/height/upscaler_path 表单字段
+
+    转发后返回 JPEG 二进制图片。
+    """
+    ld_override = (
+        request.json.get("local_dream_url", None)
+        if request.is_json
+        else request.form.get("local_dream_url", None)
+    )
+    url = resolve_ld_url(ld_override)
+    try:
+        if request.is_json:
+            body = request.json
+            img_b64 = body.get("image", "")
+            if not img_b64:
+                return jsonify({"error": "Missing image"}), 400
+            width = int(body.get("width", 512))
+            height = int(body.get("height", 512))
+            upscaler_path = body.get("upscaler_path", "")
+            use_opencl = body.get("use_opencl", False)
+            # 解码 base64 PNG → raw RGB 字节
+            png_bytes = base64.b64decode(img_b64)
+            img = Image.open(io.BytesIO(png_bytes)).convert("RGB")
+            img_bytes = img.tobytes()
+            width, height = img.size
+        else:
+            image_file = request.files.get("image")
+            if not image_file:
+                return jsonify({"error": "Missing image file"}), 400
+            img_bytes = image_file.read()
+            width = int(request.form.get("width", 512))
+            height = int(request.form.get("height", 512))
+            upscaler_path = request.form.get("upscaler_path", "")
+            use_opencl = request.form.get("use_opencl", "false").lower() in ("true", "1")
+
+        if not upscaler_path:
+            return jsonify({"error": "Missing upscaler_path"}), 400
+
+        headers = {
+            "X-Image-Width": str(width),
+            "X-Image-Height": str(height),
+            "X-Upscaler-Path": upscaler_path,
+            "X-Use-OpenCL": "true" if use_opencl else "false",
+        }
+        r = requests.post(f"{url}/upscale", data=img_bytes, headers=headers, timeout=300)
+
+        out_w = r.headers.get("X-Output-Width", str(width * 4))
+        out_h = r.headers.get("X-Output-Height", str(height * 4))
+
+        resp = Response(r.content, mimetype=r.headers.get("Content-Type", "image/jpeg"))
+        resp.headers["X-Output-Width"] = out_w
+        resp.headers["X-Output-Height"] = out_h
+        resp.headers["X-Duration-Ms"] = r.headers.get("X-Duration-Ms", "0")
+        resp.headers["Access-Control-Expose-Headers"] = (
+            "X-Output-Width,X-Output-Height,X-Duration-Ms"
+        )
+        return resp
+    except requests.exceptions.ConnectionError:
+        return jsonify({"error": "Cannot connect to Local Dream"}), 502
     except Exception as e:
         return jsonify({"error": str(e)}), 502
 
@@ -159,7 +250,13 @@ def generate():
                         yield f"event: {event.type}\n"
                     yield f"data: {new_data}\n\n"
         except requests.exceptions.ConnectionError:
-            yield "data: " + json.dumps({"type": "error", "error": "Cannot connect to Local Dream. Is it running?"}) + "\n\n"
+            yield (
+                "data: "
+                + json.dumps(
+                    {"type": "error", "error": "Cannot connect to Local Dream. Is it running?"}
+                )
+                + "\n\n"
+            )
         except Exception as e:
             yield "data: " + json.dumps({"type": "error", "error": str(e)}) + "\n\n"
 

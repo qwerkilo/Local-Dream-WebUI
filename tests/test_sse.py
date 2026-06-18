@@ -11,7 +11,6 @@ from sse import (
     progress_handler,
 )
 
-
 # --- parse_sse ---
 
 
@@ -120,12 +119,14 @@ def test_complete_to_png_b64_roundtrip_1x1_white():
 
     b'\\xff\\xff\\xff' = '////' in base64（3 字节整除，无 padding）。
     """
-    data = json.dumps({
-        "type": "complete",
-        "image": "////",
-        "width": 1,
-        "height": 1,
-    })
+    data = json.dumps(
+        {
+            "type": "complete",
+            "image": "////",
+            "width": 1,
+            "height": 1,
+        }
+    )
     result_str = complete_to_png_b64(data)
     result = json.loads(result_str)
     assert "png_image" in result
@@ -139,12 +140,14 @@ def test_complete_to_png_b64_preserves_dimensions():
     """width/height 字段在转换后保留。"""
     # 64x32 全白 raw RGB：每像素 3 字节，共 6144 字节
     raw = b"\xff" * (64 * 32 * 3)
-    data = json.dumps({
-        "type": "complete",
-        "image": base64.b64encode(raw).decode(),
-        "width": 64,
-        "height": 32,
-    })
+    data = json.dumps(
+        {
+            "type": "complete",
+            "image": base64.b64encode(raw).decode(),
+            "width": 64,
+            "height": 32,
+        }
+    )
     result = json.loads(complete_to_png_b64(data))
     assert result["width"] == 64
     assert result["height"] == 32
@@ -153,14 +156,53 @@ def test_complete_to_png_b64_preserves_dimensions():
 
 def test_complete_to_png_b64_removes_image_field():
     """原 image 字段在转换后被删除。"""
-    data = json.dumps({
-        "type": "complete",
-        "image": "////",
-        "width": 1,
-        "height": 1,
-    })
+    data = json.dumps(
+        {
+            "type": "complete",
+            "image": "////",
+            "width": 1,
+            "height": 1,
+        }
+    )
     result = json.loads(complete_to_png_b64(data))
     assert "image" not in result
+
+
+def test_complete_to_png_b64_format_jpeg_passthrough():
+    """format=jpeg 时，图像已为压缩格式，直接传为 png_image。"""
+    raw = b"\xff\xd8\xff\xe0"  # JPEG SOI 标记，不需完整 JPEG
+    data = json.dumps(
+        {
+            "type": "complete",
+            "image": base64.b64encode(raw).decode(),
+            "width": 1,
+            "height": 1,
+            "format": "jpeg",
+        }
+    )
+    result = json.loads(complete_to_png_b64(data))
+    assert "image" not in result
+    assert "png_image" in result
+    decoded = base64.b64decode(result["png_image"])
+    assert decoded[:2] == b"\xff\xd8"
+
+
+def test_complete_to_png_b64_format_png_passthrough():
+    """format=png 时，图像已为 PNG，直接传为 png_image。"""
+    raw = b"\x89PNG\r\n\x1a\n"
+    data = json.dumps(
+        {
+            "type": "complete",
+            "image": base64.b64encode(raw).decode(),
+            "width": 1,
+            "height": 1,
+            "format": "png",
+        }
+    )
+    result = json.loads(complete_to_png_b64(data))
+    assert "image" not in result
+    decoded = base64.b64decode(result["png_image"])
+    assert decoded[:8] == b"\x89PNG\r\n\x1a\n"
 
 
 # --- passthrough ---

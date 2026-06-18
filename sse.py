@@ -11,8 +11,8 @@
 import base64
 import io
 import json
-from collections import namedtuple
-from typing import Callable, Iterable, Iterator
+from collections.abc import Callable, Iterable, Iterator
+from typing import NamedTuple
 
 from PIL import Image
 
@@ -20,7 +20,9 @@ from PIL import Image
 # 解析后的 SSE 事件
 # type 字段可能为 None（无 event: 行时，SSE 默认值）
 # data 字段为原始字符串（多行 data 用 \n 拼接，符合 SSE 规范）
-Event = namedtuple("Event", ["type", "data"])
+class Event(NamedTuple):
+    type: str | None
+    data: str
 
 
 def parse_sse(lines: Iterable[bytes]) -> Iterator[Event]:
@@ -51,9 +53,9 @@ def parse_sse(lines: Iterable[bytes]) -> Iterator[Event]:
             # 注释行
             continue
         if line.startswith("event:"):
-            event_type = line[len("event:"):].strip()
+            event_type = line[len("event:") :].strip()
         elif line.startswith("data:"):
-            data_parts.append(line[len("data:"):].strip())
+            data_parts.append(line[len("data:") :].strip())
 
 
 def passthrough(data: str) -> str:
@@ -62,18 +64,29 @@ def passthrough(data: str) -> str:
 
 
 def complete_to_png_b64(data: str) -> str:
-    """complete 事件 handler：将 base64 RGB 字节转 PNG 并替换 image 字段。
+    """complete 事件 handler：将 base64 图像数据转 PNG 并替换 image 字段。
 
     Local Dream 的 'complete' 事件以 raw RGB 字节（不是 PNG）传输图像，
     浏览器无法直接显示——必须先转 PNG。前端依赖字段名 png_image，
     同时删除原 image 字段以避免数据冗余。
+
+    如果 LD 返回的 format 为 "jpeg" 或 "png"，则图像数据已经是压缩格式，
+    无需再转码，直接重命名为 png_image 即可。
     """
     payload = json.loads(data)
+    fmt = payload.get("format", "raw")
     raw = base64.b64decode(payload["image"])
-    img = Image.frombytes("RGB", (payload["width"], payload["height"]), raw)
-    buf = io.BytesIO()
-    img.save(buf, format="PNG")
-    payload["png_image"] = base64.b64encode(buf.getvalue()).decode()
+
+    if fmt in ("jpeg", "png"):
+        # 已是压缩格式，直接重命名（JPEG 也保持原格式，浏览器可显示）
+        payload["png_image"] = base64.b64encode(raw).decode()
+    else:
+        # raw RGB 字节 → 解码 → 转 PNG → base64
+        img = Image.frombytes("RGB", (payload["width"], payload["height"]), raw)
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        payload["png_image"] = base64.b64encode(buf.getvalue()).decode()
+
     del payload["image"]
     return json.dumps(payload)
 
@@ -100,11 +113,7 @@ def progress_handler(data: str) -> str:
         return data  # 非对象透传
 
     step = payload.get("step")
-    total = (
-        payload.get("total")
-        or payload.get("max_steps")
-        or payload.get("steps")
-    )
+    total = payload.get("total") or payload.get("max_steps") or payload.get("steps")
 
     percent: float | None = None
     if isinstance(step, (int, float)) and isinstance(total, (int, float)) and total > 0:

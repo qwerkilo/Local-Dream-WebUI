@@ -110,9 +110,7 @@ function makeFakeResponse(chunks) {
 
 describe("events", () => {
   test("按 \n\n 切分，yield 已解析事件", async () => {
-    const res = makeFakeResponse([
-      'event: a\ndata: {"x":1}\n\nevent: b\ndata: {"y":2}\n\n',
-    ]);
+    const res = makeFakeResponse(['event: a\ndata: {"x":1}\n\nevent: b\ndata: {"y":2}\n\n']);
     const out = [];
     for await (const e of events(res)) out.push(e);
     expect(out).toEqual([
@@ -133,7 +131,7 @@ describe("events", () => {
   test("跨块缓冲：事件跨越多次 read 仍能正确切分", async () => {
     // 故意把一个事件切成三块喂入，验证 buf 拼接
     const res = makeFakeResponse([
-      'event: prog',
+      "event: prog",
       'ress\ndata: {"s',
       'tep":3,"total":4}\n\nevent: done\ndata: [DONE]\n\n',
     ]);

@@ -7,7 +7,6 @@ import pytest
 
 from app import DEFAULT_LD_URL, HFAutomask, resolve_ld_url
 
-
 # --- fallback behavior ---
 
 
@@ -36,7 +35,7 @@ def test_resolve_non_string_returns_default():
     assert resolve_ld_url(8081) == DEFAULT_LD_URL
     assert resolve_ld_url([]) == DEFAULT_LD_URL
     assert resolve_ld_url({}) == DEFAULT_LD_URL
-    assert resolve_ld_url(False) == DEFAULT_LD_URL
+    assert resolve_ld_url(override=False) == DEFAULT_LD_URL
 
 
 # --- pass-through behavior ---
@@ -99,6 +98,7 @@ def test_resolve_allowlist_rejects_unlisted_host_silently(monkeypatch):
     """
     monkeypatch.setenv("LD_ALLOWED_HOSTS", "127.0.0.1:8081")
     from app import DEFAULT_LD_URL
+
     assert resolve_ld_url("http://evil.com:8081") == DEFAULT_LD_URL
     assert resolve_ld_url("http://10.0.0.1:8081") == DEFAULT_LD_URL
 
@@ -106,13 +106,17 @@ def test_resolve_allowlist_rejects_unlisted_host_silently(monkeypatch):
 def test_resolve_allowlist_strips_url_path_query(monkeypatch):
     """URL 路径 / query 不会影响 netloc 匹配。"""
     monkeypatch.setenv("LD_ALLOWED_HOSTS", "127.0.0.1:8081")
-    assert resolve_ld_url("http://127.0.0.1:8081/some/path?q=1") == "http://127.0.0.1:8081/some/path?q=1"
+    assert (
+        resolve_ld_url("http://127.0.0.1:8081/some/path?q=1")
+        == "http://127.0.0.1:8081/some/path?q=1"
+    )
 
 
 def test_resolve_allowlist_rejects_url_without_netloc(monkeypatch):
     """无法提取 netloc 的字符串（无 :// 前缀）→ 视为未通过白名单，回落。"""
     monkeypatch.setenv("LD_ALLOWED_HOSTS", "127.0.0.1:8081")
     from app import DEFAULT_LD_URL
+
     assert resolve_ld_url("not-a-url") == DEFAULT_LD_URL
     assert resolve_ld_url("127.0.0.1:8081") == DEFAULT_LD_URL  # 缺 scheme
 
@@ -152,7 +156,9 @@ def _mock_hf_response(status_code: int, json_payload: dict | None = None, text: 
 
 def test_hf_automask_segment_returns_parsed_json():
     """成功响应：返回 json() 的结果。"""
-    with patch("app.requests.post", return_value=_mock_hf_response(200, {"mask": [0, 1, 0]})) as mock_post:
+    with patch(
+        "app.requests.post", return_value=_mock_hf_response(200, {"mask": [0, 1, 0]})
+    ) as mock_post:
         result = HFAutomask("tok").segment(b"png-bytes")
     assert result == {"mask": [0, 1, 0]}
     # 验证端点、请求头、data 都对
@@ -173,9 +179,11 @@ def test_hf_automask_custom_timeout_passed_through():
 
 def test_hf_automask_non_2xx_raises():
     """非 2xx 响应：raise_for_status 抛错，调用方处理。"""
-    with patch("app.requests.post", return_value=_mock_hf_response(503, text="service down")):
-        with pytest.raises(Exception, match="503"):
-            HFAutomask("tok").segment(b"x")
+    with (
+        patch("app.requests.post", return_value=_mock_hf_response(503, text="service down")),
+        pytest.raises(Exception, match="503"),
+    ):
+        HFAutomask("tok").segment(b"x")
 
 
 def test_hf_automask_endpoint_constant_is_the_clothes_model():
@@ -187,6 +195,7 @@ def test_hf_automask_endpoint_constant_is_the_clothes_model():
 def test_automask_route_returns_segmentation_result_on_success():
     """/automask 成功路径：调用 adapter 并返回结果。"""
     from app import app as flask_app
+
     with patch("app.requests.post", return_value=_mock_hf_response(200, {"mask": [1, 0, 1]})):
         client = flask_app.test_client()
         response = client.post(
@@ -200,6 +209,7 @@ def test_automask_route_returns_segmentation_result_on_success():
 def test_automask_route_returns_502_on_adapter_error():
     """/automask adapter 抛错时返回 502 + error 信息。"""
     from app import app as flask_app
+
     with patch("app.requests.post", return_value=_mock_hf_response(401, text="unauthorized")):
         client = flask_app.test_client()
         response = client.post("/automask", json={"image": "aGVsbG8="})
@@ -213,7 +223,10 @@ def test_automask_route_body_token_takes_precedence_over_env(monkeypatch):
     """body.token 非空时优先使用 body 的 token，env HF_TOKEN 被忽略。"""
     monkeypatch.setenv("HF_TOKEN", "env-token-should-not-be-used")
     from app import app as flask_app
-    with patch("app.requests.post", return_value=_mock_hf_response(200, {"mask": [0]})) as mock_post:
+
+    with patch(
+        "app.requests.post", return_value=_mock_hf_response(200, {"mask": [0]})
+    ) as mock_post:
         client = flask_app.test_client()
         response = client.post(
             "/automask",
@@ -228,7 +241,10 @@ def test_automask_route_falls_back_to_env_token(monkeypatch):
     """body 无 token 时回落 env HF_TOKEN。"""
     monkeypatch.setenv("HF_TOKEN", "env-token-fallback")
     from app import app as flask_app
-    with patch("app.requests.post", return_value=_mock_hf_response(200, {"mask": [0]})) as mock_post:
+
+    with patch(
+        "app.requests.post", return_value=_mock_hf_response(200, {"mask": [0]})
+    ) as mock_post:
         client = flask_app.test_client()
         response = client.post("/automask", json={"image": "aGVsbG8="})  # 无 token 字段
     assert response.status_code == 200
@@ -244,7 +260,10 @@ def test_automask_route_no_token_uses_empty_bearer(monkeypatch):
     """
     monkeypatch.delenv("HF_TOKEN", raising=False)
     from app import app as flask_app
-    with patch("app.requests.post", return_value=_mock_hf_response(200, {"mask": [0]})) as mock_post:
+
+    with patch(
+        "app.requests.post", return_value=_mock_hf_response(200, {"mask": [0]})
+    ) as mock_post:
         client = flask_app.test_client()
         response = client.post("/automask", json={"image": "aGVsbG8="})
     assert response.status_code == 200
@@ -256,8 +275,13 @@ def test_automask_route_sends_png_bytes_and_headers(monkeypatch):
     """验证发往 HF 的请求：headers、data、endpoint、timeout 全部对。"""
     monkeypatch.setenv("HF_TOKEN", "tok")
     from app import app as flask_app
-    realistic_b64 = base64.b64encode(b"\x89PNG\r\n\x1a\n" + b"\x00" * 100).decode()  # 伪 PNG 头 + 数据
-    with patch("app.requests.post", return_value=_mock_hf_response(200, {"mask": [0, 1, 0, 1]})) as mock_post:
+
+    realistic_b64 = base64.b64encode(
+        b"\x89PNG\r\n\x1a\n" + b"\x00" * 100
+    ).decode()  # 伪 PNG 头 + 数据
+    with patch(
+        "app.requests.post", return_value=_mock_hf_response(200, {"mask": [0, 1, 0, 1]})
+    ) as mock_post:
         client = flask_app.test_client()
         response = client.post("/automask", json={"image": realistic_b64})
     assert response.status_code == 200
@@ -275,7 +299,10 @@ def test_automask_route_whitespace_token_falls_back_to_env(monkeypatch):
     """body.token 是纯空白 → 视为空，回落 env。"""
     monkeypatch.setenv("HF_TOKEN", "env-tok")
     from app import app as flask_app
-    with patch("app.requests.post", return_value=_mock_hf_response(200, {"mask": [0]})) as mock_post:
+
+    with patch(
+        "app.requests.post", return_value=_mock_hf_response(200, {"mask": [0]})
+    ) as mock_post:
         client = flask_app.test_client()
         response = client.post(
             "/automask",
