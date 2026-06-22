@@ -2832,16 +2832,6 @@ let origImgWidth = 0, origImgHeight = 0;
             base.onload = tryShow; base.src = "data:image/png;base64," + originalImgB64;
             gen.onload = tryShow; gen.src = genB64;
           }
-              const off = document.createElement("canvas");
-              off.width = ow2; off.height = oh2;
-              const ctx = off.getContext("2d");
-              ctx.drawImage(base, 0, 0);
-              ctx.drawImage(gen, sl, st, sw, sh, ol - ox, ot - oy, cw, ch);
-              showDlFull(off.toDataURL("image/png"));
-            };
-            base.onload = tryShow; base.src = "data:image/png;base64," + originalImgB64;
-            gen.onload = tryShow; gen.src = genB64;
-          }
           // 重置 upscale 按钮状态
           $("upscaleBtn").disabled = false;
           $("upscaleBtn").textContent = t("upscale");
