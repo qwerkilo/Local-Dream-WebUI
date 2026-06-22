@@ -630,6 +630,9 @@ $("cropConfirm").addEventListener("click", () => {
   ictx.fillRect(0, 0, sz, sz);
   ictx.drawImage(cropImg, cropX, cropY, cropImg.width * cropScale, cropImg.height * cropScale);
   imgB64 = imgCanvas.toDataURL("image/png").split(",")[1];
+  // 裁剪后重置填充偏移和 rawUploadedImg，让合成使用最新的裁剪坐标
+  img2imgPaddingOffset = null;
+  rawUploadedImg = null;
   lastCropRegion = {
     cropX,
     cropY,
@@ -1492,8 +1495,8 @@ async function sendToImg2img() {
   // SDXL 需要 1024×1024 画布；将非方形图加黑边填充
   const workB64 = isNonSquare ? await padImageToSquare(b64, 1024) : b64;
 
-  // 保存原始图（ unpadded ）供 Download Full 使用（已有则跳过，避免覆盖上传原图）
-  if (!originalImgB64) originalImgB64 = b64;
+  // 保存填充后的图片供 Download Full 合成使用（裁剪坐标基于填充后的画布）
+  originalImgB64 = workB64;
   // 保存原图 unpadded 尺寸供裁剪坐标映射用
   origImgWidth = iw;
   origImgHeight = ih;
