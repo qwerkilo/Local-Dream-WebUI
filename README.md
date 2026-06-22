@@ -45,14 +45,14 @@ Open http://localhost:5000 in a browser. Local Dream must be running on `127.0.0
 
 Flask server with 6 routes:
 
-| Route | Method | Description |
-|---|---|---|
-| `/` | GET | Renders frontend |
-| `/health` | GET | Probes Local Dream reachability |
-| `/generate` | POST | Proxies generation with SSE streaming |
-| `/automask` | POST | Hugging Face clothing segmentation |
-| `/tokenize` | POST | Prompt token count from Local Dream |
-| `/upscale` | POST | Image upscaling via Local Dream |
+| Route       | Method | Description                           |
+| ----------- | ------ | ------------------------------------- |
+| `/`         | GET    | Renders frontend                      |
+| `/health`   | GET    | Probes Local Dream reachability       |
+| `/generate` | POST   | Proxies generation with SSE streaming |
+| `/automask` | POST   | Hugging Face clothing segmentation    |
+| `/tokenize` | POST   | Prompt token count from Local Dream   |
+| `/upscale`  | POST   | Image upscaling via Local Dream       |
 
 SSE event stream processed in `sse.py` — raw RGB bytes converted to PNG base64, progress enriched with percent.
 
@@ -61,6 +61,7 @@ SSE event stream processed in `sse.py` — raw RGB bytes converted to PNG base64
 Single-file vanilla HTML/CSS/JS. No framework, no build step. 15 parameter fields, image upload with crop modal, mask editor, automask overlay, parameter presets, upscaler model presets, dual theme, dual language.
 
 Reusable modules under `/static/`:
+
 - `params.js` — `createParamsForm()`: DOM ↔ field value binding; `createParamsPayload()`: field → wire payload
 - `sse-client.js` — `parse()`, `extractPercent()`, `events()`: SSE protocol layer
 
@@ -83,13 +84,13 @@ bun prettier --write .        # Format HTML / CSS / JS
 
 ## Test Coverage
 
-| Module | Coverage | Tests |
-|---|---|---|
-| `sse.py` | 100% | 24 Python tests |
-| `app.py` | 93% | 46 Python tests |
-| `params.js` | — | 56 JS tests (payload + form) |
-| `sse-client.js` | — | 17 JS tests |
-| **Total** | **95%** | **70 Python + 87 JS = 157 tests** |
+| Module          | Coverage | Tests                             |
+| --------------- | -------- | --------------------------------- |
+| `sse.py`        | 100%     | 24 Python tests                   |
+| `app.py`        | 93%      | 46 Python tests                   |
+| `params.js`     | —        | 56 JS tests (payload + form)      |
+| `sse-client.js` | —        | 17 JS tests                       |
+| **Total**       | **95%**  | **70 Python + 87 JS = 157 tests** |
 
 ## Trusted-host Allowlist
 
@@ -106,6 +107,10 @@ When configured, URLs not on the list silently fall back to the default — no e
 - All generation runs locally — no data leaves your network
 - Automask uses Hugging Face's hosted inference API (requires HF_TOKEN)
 - No telemetry, no analytics, no external requests beyond LD and Hugging Face
+
+## Known Issues / Fixes
+
+- **Mask brush opacity** — mask editor brush now uses fully opaque white (`#ffffff`) instead of 95% opacity. Previous versions produced masks with ~242/255 values, causing only 95% of the generated image to be applied in inpaint regions.
 
 ## Acknowledgements
 
