@@ -2789,25 +2789,51 @@ let origImgWidth = 0, origImgHeight = 0;
             $("dlFullBtn").href = src;
           }
           function stitchFullToOriginal(genB64) {
-            // 裁剪案例：将 gen 缩放到裁剪区域大小后画到原始图上
+            // crop_result 缩放到 crop 尺寸，替换进 origin 对应位置
             if (!originalImgB64 || !lastCropRegion) return;
             const { cropX, cropY, cropScale, targetSize } = lastCropRegion;
+            const ox = img2imgPaddingOffset ? img2imgPaddingOffset.x : 0;
+            const oy = img2imgPaddingOffset ? img2imgPaddingOffset.y : 0;
+            const ow = img2imgPaddingOffset ? img2imgPaddingOffset.origW : 0;
+            const oh = img2imgPaddingOffset ? img2imgPaddingOffset.origH : 0;
+            // crop 区域在 padded 坐标中的位置和尺寸
+            const cropL = -cropX / cropScale;
+            const cropT = -cropY / cropScale;
+            const cropW = targetSize / cropScale;
+            const cropH = targetSize / cropScale;
             const base = new Image();
             const gen = new Image();
             let loaded = 0;
             const tryShow = () => {
               loaded++;
               if (loaded < 2) return;
-              const ow = base.naturalWidth, oh = base.naturalHeight;
+              const ow2 = base.naturalWidth, oh2 = base.naturalHeight;
+              const gw = gen.naturalWidth, gh = gen.naturalHeight;
+              // crop 区域在 origin 上的重叠
+              const ol = Math.max(ox, cropL);
+              const ot = Math.max(oy, cropT);
+              const or2 = Math.min(ox + ow2, cropL + cropW);
+              const ob2 = Math.min(oy + oh2, cropT + cropH);
+              const cw = or2 - ol, ch = ob2 - ot;
+              if (cw <= 0 || ch <= 0) { showDlFull(null); return; }
+              let sl, st, sw, sh;
+              // crop_result (LD 输出) 对应的是从 padded canvas 中心裁出的区域
+              // 若无缩放（crop 覆盖整个 origin）：gen 和 origin 1:1 对应
+              // 若有缩放：gen 代表 crop 区域，需按比例映射
+              if (cropL <= ox && cropT <= oy && cropL + cropW >= ox + ow2 && cropT + cropH >= oy + oh2) {
+                sl = ol - ox; st = ot - oy;
+                sw = cw; sh = ch;
+              } else {
+                sl = (ol - cropL) / cropW * gw;
+                st = (ot - cropT) / cropH * gh;
+                sw = cw / cropW * gw;
+                sh = ch / cropH * gh;
+              }
               const off = document.createElement("canvas");
-              off.width = ow; off.height = oh;
+              off.width = ow2; off.height = oh2;
               const ctx = off.getContext("2d");
               ctx.drawImage(base, 0, 0);
-              const cropLeft = -cropX / cropScale;
-              const cropTop = -cropY / cropScale;
-              const cropW = targetSize / cropScale;
-              const cropH = targetSize / cropScale;
-              ctx.drawImage(gen, cropLeft, cropTop, cropW, cropH);
+              ctx.drawImage(gen, sl, st, sw, sh, ol - ox, ot - oy, cw, ch);
               showDlFull(off.toDataURL("image/png"));
             };
             base.onload = tryShow; base.src = "data:image/png;base64," + originalImgB64;
