@@ -630,8 +630,7 @@ $("cropConfirm").addEventListener("click", () => {
   ictx.fillRect(0, 0, sz, sz);
   ictx.drawImage(cropImg, cropX, cropY, cropImg.width * cropScale, cropImg.height * cropScale);
   imgB64 = imgCanvas.toDataURL("image/png").split(",")[1];
-  // 裁剪后重置填充偏移和 rawUploadedImg，让合成使用最新的裁剪坐标
-  img2imgPaddingOffset = null;
+  // 裁剪后清除 rawUploadedImg，让 compositeInpaint 使用 origImg（裁剪后的画布）
   rawUploadedImg = null;
   lastCropRegion = {
     cropX,
