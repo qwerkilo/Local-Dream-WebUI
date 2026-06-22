@@ -2757,17 +2757,16 @@ let origImgWidth = 0, origImgHeight = 0;
           if (mode === "img2img" && lastCropRegion) {
             const mask = lastPayload && lastPayload.mask;
             if (img2imgPaddingOffset) {
-              // 填充案例：LD 输出已是最终图，直接显示并使用为全图
               const rawSrc = "data:image/png;base64," + data.png_image;
               setOutput(rawSrc);
               if (mask) {
                 compositeInpaint(lastPayload.image, data.png_image, mask).then((src) => {
                   setOutput(src);
                   lastOutputB64 = src.split(",")[1];
-                  showDlFull(src);
+                  stitchFullToOriginal(src);
                 });
               } else {
-                showDlFull(rawSrc);
+                stitchFullToOriginal(rawSrc);
               }
             } else if (mask) {
               compositeInpaint(lastPayload.image, data.png_image, mask).then((src) => {
