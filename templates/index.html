@@ -2004,10 +2004,16 @@ worst quality, low quality, normal quality, poorly drawn, lowres, low resolution
         canvas.width = cw;
         canvas.height = ch;
 
-        // Display size: fit in viewport
+        // Display size: fit in viewport, preserve aspect ratio
         const displaySize = Math.min(window.innerWidth - 16, window.innerHeight - 160, 600);
-        canvas.style.width = displaySize + "px";
-        canvas.style.height = displaySize + "px";
+        const dRatio = cw / ch;
+        if (dRatio > 1) {
+          canvas.style.width = displaySize + "px";
+          canvas.style.height = Math.round(displaySize / dRatio) + "px";
+        } else {
+          canvas.style.height = displaySize + "px";
+          canvas.style.width = Math.round(displaySize * dRatio) + "px";
+        }
 
         // Initial: fit inside canvas
         applyCropFit();
@@ -2045,11 +2051,11 @@ worst quality, low quality, normal quality, poorly drawn, lowres, low resolution
       function drawCrop() {
         const canvas = $("cropCanvas");
         const ctx = canvas.getContext("2d");
-        const sz = canvas.width;
+        const cw = canvas.width, ch = canvas.height;
         // Checkerboard background
         const csz = 16;
-        for (let y = 0; y < sz; y += csz)
-          for (let x = 0; x < sz; x += csz) {
+        for (let y = 0; y < ch; y += csz)
+          for (let x = 0; x < cw; x += csz) {
             ctx.fillStyle = ((x + y) / csz) % 2 === 0 ? "#e0e0e0" : "#f0f0f0";
             ctx.fillRect(x, y, csz, csz);
           }
