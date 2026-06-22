@@ -1992,9 +1992,17 @@ worst quality, low quality, normal quality, poorly drawn, lowres, low resolution
       function openCropModal(img) {
         cropImg = img;
         const targetSize = getTargetSize();
+        // 按目标输出宽高比设定裁切画布，而非恒定 1:1
+        const arVal = $("aspectRatio").value;
+        let cw = targetSize, ch = targetSize;
+        if (arVal && arVal !== "none") {
+          const [aw, ah] = arVal.split(":").map(Number);
+          if (aw > ah) { cw = targetSize; ch = Math.round(targetSize * ah / aw); }
+          else { ch = targetSize; cw = Math.round(targetSize * aw / ah); }
+        }
         const canvas = $("cropCanvas");
-        canvas.width = targetSize;
-        canvas.height = targetSize;
+        canvas.width = cw;
+        canvas.height = ch;
 
         // Display size: fit in viewport
         const displaySize = Math.min(window.innerWidth - 16, window.innerHeight - 160, 600);
@@ -2012,21 +2020,26 @@ worst quality, low quality, normal quality, poorly drawn, lowres, low resolution
       }
 
       function applyCropFit() {
-        const sz = getTargetSize();
-        cropScale = Math.min(sz / cropImg.width, sz / cropImg.height);
-        cropX = (sz - cropImg.width * cropScale) / 2;
-        cropY = (sz - cropImg.height * cropScale) / 2;
+        const canvas = $("cropCanvas");
+        const cw = canvas.width, ch = canvas.height;
+        const sc = Math.min(cw / cropImg.width, ch / cropImg.height);
+        cropScale = sc;
+        cropX = (cw - cropImg.width * sc) / 2;
+        cropY = (ch - cropImg.height * sc) / 2;
       }
       function applyCropFill() {
-        const sz = getTargetSize();
-        cropScale = Math.max(sz / cropImg.width, sz / cropImg.height);
-        cropX = (sz - cropImg.width * cropScale) / 2;
-        cropY = (sz - cropImg.height * cropScale) / 2;
+        const canvas = $("cropCanvas");
+        const cw = canvas.width, ch = canvas.height;
+        const sc = Math.max(cw / cropImg.width, ch / cropImg.height);
+        cropScale = sc;
+        cropX = (cw - cropImg.width * sc) / 2;
+        cropY = (ch - cropImg.height * sc) / 2;
       }
       function applyCropCenter() {
-        const sz = getTargetSize();
-        cropX = (sz - cropImg.width * cropScale) / 2;
-        cropY = (sz - cropImg.height * cropScale) / 2;
+        const canvas = $("cropCanvas");
+        const cw = canvas.width, ch = canvas.height;
+        cropX = (cw - cropImg.width * cropScale) / 2;
+        cropY = (ch - cropImg.height * cropScale) / 2;
       }
 
       function drawCrop() {
@@ -2161,15 +2174,15 @@ worst quality, low quality, normal quality, poorly drawn, lowres, low resolution
       });
       $("cropConfirm").addEventListener("click", () => {
         const canvas = $("cropCanvas");
-        const sz = canvas.width;
+        const cw = canvas.width, ch = canvas.height;
 
         // Export composited image (gray fill for empty areas)
         const imgCanvas = document.createElement("canvas");
-        imgCanvas.width = sz;
-        imgCanvas.height = sz;
+        imgCanvas.width = cw;
+        imgCanvas.height = ch;
         const ictx = imgCanvas.getContext("2d");
         ictx.fillStyle = "#808080";
-        ictx.fillRect(0, 0, sz, sz);
+        ictx.fillRect(0, 0, cw, ch);
         ictx.drawImage(
           cropImg,
           cropX,
@@ -2184,26 +2197,27 @@ worst quality, low quality, normal quality, poorly drawn, lowres, low resolution
           cropScale,
           cropImgW: cropImg.width,
           cropImgH: cropImg.height,
-          targetSize: sz,
+          targetW: cw,
+          targetH: ch,
         };
 
         // Export outpaint mask (white where empty, black where image covers)
         const maskCanvas = document.createElement("canvas");
-        maskCanvas.width = sz;
-        maskCanvas.height = sz;
+        maskCanvas.width = cw;
+        maskCanvas.height = ch;
         const mctx = maskCanvas.getContext("2d");
         mctx.fillStyle = "white";
-        mctx.fillRect(0, 0, sz, sz);
+        mctx.fillRect(0, 0, cw, ch);
         mctx.fillStyle = "black";
         const ix = Math.max(0, cropX),
           iy = Math.max(0, cropY);
-        const iw = Math.min(sz - ix, cropImg.width * cropScale - Math.max(0, -cropX));
-        const ih = Math.min(sz - iy, cropImg.height * cropScale - Math.max(0, -cropY));
+        const iw = Math.min(cw - ix, cropImg.width * cropScale - Math.max(0, -cropX));
+        const ih = Math.min(ch - iy, cropImg.height * cropScale - Math.max(0, -cropY));
         if (iw > 0 && ih > 0) mctx.fillRect(ix, iy, iw, ih);
 
         // Check if there are any empty areas (white pixels)
-        const mData = mctx.getImageData(0, 0, sz, sz).data;
-        const hasEmpty = Array.from({ length: sz * sz }, (_, i) => mData[i * 4]).some(
+        const mData = mctx.getImageData(0, 0, cw, ch).data;
+        const hasEmpty = Array.from({ length: cw * ch }, (_, i) => mData[i * 4]).some(
           (v) => v > 128,
         );
 
@@ -2790,7 +2804,7 @@ let origImgWidth = 0, origImgHeight = 0;
           function stitchFullToOriginal(genB64) {
             // crop_result 缩放到 crop 尺寸，替换进 origin 对应位置
             if (!originalImgB64 || !lastCropRegion) return;
-            const { cropX, cropY, cropScale, targetSize } = lastCropRegion;
+            const { cropX, cropY, cropScale, targetW, targetH } = lastCropRegion;
             const ox = img2imgPaddingOffset ? img2imgPaddingOffset.x : 0;
             const oy = img2imgPaddingOffset ? img2imgPaddingOffset.y : 0;
             const ow = img2imgPaddingOffset ? img2imgPaddingOffset.origW : 0;
@@ -2798,8 +2812,8 @@ let origImgWidth = 0, origImgHeight = 0;
             // crop 区域在 padded 坐标中的位置和尺寸
             const cropL = -cropX / cropScale;
             const cropT = -cropY / cropScale;
-            const cropW = targetSize / cropScale;
-            const cropH = targetSize / cropScale;
+            const cropW = targetW / cropScale;
+            const cropH = targetH / cropScale;
             const base = new Image();
             const gen = new Image();
             let loaded = 0;
@@ -3047,7 +3061,10 @@ let origImgWidth = 0, origImgHeight = 0;
         paddedImg.onload = () => {
           rawUploadedImg = paddedImg;
           cropImg = paddedImg;
-          lastCropRegion = { cropX: 0, cropY: 0, cropScale: 1, cropImgW: paddedImg.naturalWidth, cropImgH: paddedImg.naturalHeight };
+          const cw = isNonSquare && arStr !== "none"
+            ? Math.round(1024 * parseInt(arStr.split(":")[0]) / parseInt(arStr.split(":")[1]))
+            : 1024;
+          lastCropRegion = { cropX: 0, cropY: 0, cropScale: 1, cropImgW: paddedImg.naturalWidth, cropImgH: paddedImg.naturalHeight, targetW: isNonSquare ? cw : 1024, targetH: 1024 };
         };
         paddedImg.src = "data:image/png;base64," + workB64;
         // 切换到 img2img 模式
