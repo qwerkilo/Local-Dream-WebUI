@@ -1276,36 +1276,44 @@ worst quality, low quality, normal quality, poorly drawn, lowres, low resolution
           </div>
         </div>
 
-      <!-- Upscale standalone mode -->
-      <div id="upscaleSection" class="hidden" style="margin-top: 16px">
-        <div class="card">
-          <div class="card-title" data-i18n="tab_upscale">Upscale Image</div>
-          <div class="section">
-            <label data-i18n="label_input_image">Input image</label>
-            <label class="upload-label" for="upscaleFile">
-              <input type="file" id="upscaleFile" accept="image/*" />
-              <span id="upscaleUploadLabel" data-i18n="tap_to_upload">Tap to upload image</span>
-            </label>
-            <img id="upscalePreview" class="img-preview hidden" alt="preview" />
-          </div>
-          <div class="section">
-            <label data-i18n="label_upscaler_model">Upscaler Model</label>
-            <select id="upscaleModelSelect">
-              <option value="realesrgan_anime">Real-ESRGAN Anime</option>
-              <option value="realesrgan_realistic">UltraSharp Realistic</option>
-            </select>
-          </div>
-          <div style="display: flex; gap: 8px; margin-top: 8px">
-            <button class="gen-btn upscale-run" id="upscaleRunBtn" data-i18n="upscale">Upscale ×4</button>
-          </div>
-          <div id="upscaleResult" class="hidden" style="margin-top: 12px">
-            <img id="upscaleResultImg" alt="upscaled" style="max-width: 100%; border-radius: 6px" />
+        <!-- Upscale standalone mode -->
+        <div id="upscaleSection" class="hidden" style="margin-top: 16px">
+          <div class="card">
+            <div class="card-title" data-i18n="tab_upscale">Upscale Image</div>
+            <div class="section">
+              <label data-i18n="label_input_image">Input image</label>
+              <label class="upload-label" for="upscaleFile">
+                <input type="file" id="upscaleFile" accept="image/*" />
+                <span id="upscaleUploadLabel" data-i18n="tap_to_upload">Tap to upload image</span>
+              </label>
+              <img id="upscalePreview" class="img-preview hidden" alt="preview" />
+            </div>
+            <div class="section">
+              <label data-i18n="label_upscaler_model">Upscaler Model</label>
+              <select id="upscaleModelSelect">
+                <option value="realesrgan_anime">Real-ESRGAN Anime</option>
+                <option value="realesrgan_realistic">UltraSharp Realistic</option>
+              </select>
+            </div>
             <div style="display: flex; gap: 8px; margin-top: 8px">
-              <a class="dl-btn" id="upscaleDlBtn" download="upscaled.jpg" data-i18n="download">Download</a>
+              <button class="gen-btn upscale-run" id="upscaleRunBtn" data-i18n="upscale">
+                Upscale ×4
+              </button>
+            </div>
+            <div id="upscaleResult" class="hidden" style="margin-top: 12px">
+              <img
+                id="upscaleResultImg"
+                alt="upscaled"
+                style="max-width: 100%; border-radius: 6px"
+              />
+              <div style="display: flex; gap: 8px; margin-top: 8px">
+                <a class="dl-btn" id="upscaleDlBtn" download="upscaled.jpg" data-i18n="download"
+                  >Download</a
+                >
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
         <!-- 折叠的进阶选项 -->
         <details style="margin-top: 8px">
@@ -1339,20 +1347,20 @@ worst quality, low quality, normal quality, poorly drawn, lowres, low resolution
             <input type="checkbox" id="karras" />
             <label for="karras" data-i18n="karras">Karras sigmas</label>
           </div>
-    <div class="check-row" style="margin-bottom: 8px">
-      <input type="checkbox" id="useOpenCL" />
-      <label for="useOpenCL" data-i18n="use_opencl"
-        >Use OpenCL (Enables GPU for CPU Models)</label
-      >
-    </div>
-    <div class="section" style="margin-bottom: 4px">
-      <label data-i18n="label_upscaler_model">Upscaler Model</label>
-      <select id="upscalerSelect">
-        <option value="anime">Real-ESRGAN Anime</option>
-        <option value="realistic">UltraSharp Realistic</option>
-      </select>
-    </div>
-  </details>
+          <div class="check-row" style="margin-bottom: 8px">
+            <input type="checkbox" id="useOpenCL" />
+            <label for="useOpenCL" data-i18n="use_opencl"
+              >Use OpenCL (Enables GPU for CPU Models)</label
+            >
+          </div>
+          <div class="section" style="margin-bottom: 4px">
+            <label data-i18n="label_upscaler_model">Upscaler Model</label>
+            <select id="upscalerSelect">
+              <option value="anime">Real-ESRGAN Anime</option>
+              <option value="realistic">UltraSharp Realistic</option>
+            </select>
+          </div>
+        </details>
 
         <div class="btn-row">
           <button class="gen-btn" id="genBtn" data-i18n="generate" aria-busy="false">
@@ -1380,9 +1388,17 @@ worst quality, low quality, normal quality, poorly drawn, lowres, low resolution
           </div>
           <div style="display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap">
             <a class="dl-btn" id="dlBtn" download="dream.png" data-i18n="download">Download</a>
-            <a class="dl-btn hidden" id="dlFullBtn" download="dream_full.png" data-i18n="download_full">Download Full</a>
+            <a
+              class="dl-btn hidden"
+              id="dlFullBtn"
+              download="dream_full.png"
+              data-i18n="download_full"
+              >Download Full</a
+            >
             <button class="dl-btn" id="upscaleBtn" data-i18n="upscale">Upscale ×4</button>
-            <button class="dl-btn" id="img2imgBtn" data-i18n="send_to_img2img">Use in img2img</button>
+            <button class="dl-btn" id="img2imgBtn" data-i18n="send_to_img2img">
+              Use in img2img
+            </button>
           </div>
         </div>
       </div>

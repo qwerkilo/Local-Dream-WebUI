@@ -18,6 +18,7 @@
 ## 关键函数
 
 **`resolve_ld_url(override) -> str`** — URL 解析单点入口。
+
 - 非字符串 / 空 / 纯空白 → 回落到 `DEFAULT_LD_URL`
 - 启用了 `LD_ALLOWED_HOSTS` 白名单时，提取 netloc 并校验；不在白名单 → 静默回落默认
 - 未启用白名单 → 原样返回 override（向后兼容）
@@ -55,6 +56,7 @@
 ## 前端 SSE 消费契约
 
 `templates/index.html` 的 `parseSSEChunk` 解析 SSE 流，dispatch 顺序：
+
 1. 优先 SSE `event:` 字段（来自后端 `EVENT_HANDLERS` 注册的类型）
 2. 回退到 JSON `data.type` 字段（兼容旧版 LD 把类型塞在 JSON 里）
 

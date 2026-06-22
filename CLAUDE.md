@@ -58,10 +58,12 @@ Four routes in `app.py`:
 - `POST /automask` — `HFAutomask` adapter calls HuggingFace segformer_b2_clothes, returns segment list
 
 Shared helpers in `app.py`:
+
 - `resolve_ld_url(override)` — single URL-resolution entry; falls back to `DEFAULT_LD_URL` on empty/non-string; if `LD_ALLOWED_HOSTS` is set, also enforces netloc allowlist (silent fallback, no error to avoid probing).
 - `HFAutomask(token, timeout=60)` — wraps the HF Router call; `ENDPOINT` constant + `segment(png_bytes) -> dict`.
 
 SSE plumbing lives in `sse.py`:
+
 - `parse_sse(lines) -> Iterator[Event]` — pure SSE line parser (W3C-compliant).
 - `EVENT_HANDLERS` — registry mapping event type to handler. Add a new event type by registering one entry.
 - `complete_to_png_b64` — converts raw RGB bytes in `complete` events to base64 PNG (replaces `image` with `png_image`).
@@ -84,6 +86,7 @@ Single-page app, no framework. Key sections:
 **Size & scheduler**: Size options are 512 (default), 640, 768, 1024, and custom. Scheduler defaults to the API default (blank); other options: `euler`, `euler_a`, `lcm`, `dpm++2m`, `dpm++2m_sde`. OpenCL checkbox label: "Use OpenCL (Enables GPU for CPU Models)".
 
 **Image upload flow** (img2img):
+
 1. User taps upload → file picker opens
 2. Image loads → **Crop/Position modal** opens automatically
 3. User drags/pinch-zooms image within the target canvas size
@@ -91,12 +94,14 @@ Single-page app, no framework. Key sections:
 5. "Adjust crop" button overlaid on preview lets user reopen the modal with state preserved
 
 **Mask editor** (inpaint):
+
 - Full-screen modal with drawing canvas overlaid on the image
 - White brush = area to repaint, black = keep
 - Undo/clear/invert controls, adjustable brush (4–300px, default 80)
 - Active mask shown as a purple tint canvas overlay on the image preview
 
 **Automask** (inpaint):
+
 - Sends `imgB64` to `/automask` → HuggingFace segformer_b2_clothes
 - Full-screen modal: image with colored segment overlays, chip buttons to select/deselect segments
 - Padding slider dilates segment masks (sliding-window max, horizontal + vertical passes)
@@ -104,6 +109,7 @@ Single-page app, no framework. Key sections:
 - Result cached per image — reopening skips the API call if image unchanged
 
 **Inpaint compositing** (`compositeInpaint`):
+
 - If `rawUploadedImg` and `lastCropRegion` are available, composites at the original image's resolution
 - Reverse-maps the 512px generated image back to original coordinates: `srcX = -cropX / cropScale`, `srcW = 512 / cropScale`
 - Draws generated and mask at those coordinates on an original-size canvas, then blends pixel-by-pixel
@@ -126,8 +132,8 @@ Single-page app, no framework. Key sections:
 - Unknown scheduler strings silently fall back to default (no error)
 - Punctuation in prompts affects tokenization and output even with the same seed
 
-
 <!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:6cd5cc61 -->
+
 ## Beads Issue Tracker
 
 This project uses **bd (beads)** for issue tracking. Run `bd prime` to see full workflow context and commands.
@@ -165,6 +171,7 @@ This protocol applies when ending a Beads implementation workflow. It is subordi
 2. **Run quality gates** (if code changed) - Tests, linters, builds
 3. **Update issue status** - Close finished work, update in-progress items
 4. **Handle git/sync by active profile**:
+
    ```bash
    # Conservative/minimal/default: report status and proposed commands; wait for approval.
    git status
@@ -174,9 +181,11 @@ This protocol applies when ending a Beads implementation workflow. It is subordi
    git push
    git status
    ```
+
 5. **Hand off** - Summarize changes, validation, issue status, and any blocked sync/commit/push step
 
 **Critical rules:**
+
 - Explicit user or orchestrator instructions override this Beads block.
 - Do not commit or push without clear authority from the active profile or the current user request.
 - If a required sync or push is blocked, stop and report the exact command and error.

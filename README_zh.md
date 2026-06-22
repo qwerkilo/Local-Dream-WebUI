@@ -45,14 +45,14 @@ uv run python app.py
 
 Flask 服务器，共 6 个路由：
 
-| 路由 | 方法 | 说明 |
-|---|---|---|
-| `/` | GET | 渲染前端页面 |
-| `/health` | GET | 探测 Local Dream 可达性 |
+| 路由        | 方法 | 说明                       |
+| ----------- | ---- | -------------------------- |
+| `/`         | GET  | 渲染前端页面               |
+| `/health`   | GET  | 探测 Local Dream 可达性    |
 | `/generate` | POST | 代理生成请求，SSE 流式返回 |
-| `/automask` | POST | Hugging Face 衣物分割 |
-| `/tokenize` | POST | 查询 prompt token 计数 |
-| `/upscale` | POST | 图片无损放大 |
+| `/automask` | POST | Hugging Face 衣物分割      |
+| `/tokenize` | POST | 查询 prompt token 计数     |
+| `/upscale`  | POST | 图片无损放大               |
 
 SSE 事件流由 `sse.py` 处理 —— raw RGB 字节转 PNG base64，progress 事件附加百分比。
 
@@ -61,6 +61,7 @@ SSE 事件流由 `sse.py` 处理 —— raw RGB 字节转 PNG base64，progress 
 单文件纯 HTML/CSS/JS。无框架，无构建步骤。15 个参数字段，图片上传+裁剪模态框，遮罩编辑器，自动遮罩叠加，参数预设，放大模型预设，双主题，双语。
 
 可复用模块位于 `/static/`：
+
 - `params.js` — `createParamsForm()`: DOM ↔ 字段值双向绑定；`createParamsPayload()`: 字段 → 网络请求载荷
 - `sse-client.js` — `parse()`、`extractPercent()`、`events()`: SSE 协议层
 
@@ -83,13 +84,13 @@ bun prettier --write .          # 格式化 HTML / CSS / JS
 
 ## 测试覆盖率
 
-| 模块 | 覆盖率 | 测试数 |
-|---|---|---|
-| `sse.py` | 100% | 24 Python |
-| `app.py` | 93% | 46 Python |
-| `params.js` | — | 56 JS |
-| `sse-client.js` | — | 17 JS |
-| **总计** | **95%** | **70 Python + 87 JS = 157 个测试** |
+| 模块            | 覆盖率  | 测试数                             |
+| --------------- | ------- | ---------------------------------- |
+| `sse.py`        | 100%    | 24 Python                          |
+| `app.py`        | 93%     | 46 Python                          |
+| `params.js`     | —       | 56 JS                              |
+| `sse-client.js` | —       | 17 JS                              |
+| **总计**        | **95%** | **70 Python + 87 JS = 157 个测试** |
 
 ## 可信后端白名单
 
