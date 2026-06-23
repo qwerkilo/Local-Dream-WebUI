@@ -630,8 +630,16 @@ $("cropConfirm").addEventListener("click", () => {
   ictx.fillRect(0, 0, sz, sz);
   ictx.drawImage(cropImg, cropX, cropY, cropImg.width * cropScale, cropImg.height * cropScale);
   imgB64 = imgCanvas.toDataURL("image/png").split(",")[1];
+  // 保存 crop.png 到服务端 temp
+  fetch("/save-temp", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name: "crop", b64: imgB64 }),
+  }).catch(() => {});
   // 裁剪后重置状态：清除填充偏移和 rawUploadedImg，
   // 让 compositeInpaint 使用非填充分支，直接在 (0,0) 绘制 gen 和 mask
+  // 但保留 padding offset 供 callServerCompose 计算合成位置
+  savedPaddingOffset = img2imgPaddingOffset;
   img2imgPaddingOffset = null;
   rawUploadedImg = null;
   lastCropRegion = {
@@ -1034,10 +1042,12 @@ let lastOutputHeight = 0;
 let lastCompleteData = null;
 let lastFullComposite = null;
 let originalImgB64 = null; // original uploaded/source image base64 (unpadded, uncropped)
+let unpaddedImgB64 = null; // 原始未填充图片 base64（用于服务端合成）
 let origImgWidth = 0,
   origImgHeight = 0;
 // sendToImg2img 填充非方形图到正方形时记录偏移量，供 compositeInpaint 定位
 let img2imgPaddingOffset = null;
+let savedPaddingOffset = null; // 裁剪前保存的 padding offset，供 callServerCompose 使用
 
 // 启动后给 textarea 补一次 resize()（ParamsForm.bind 不主动调初始 resize，
 // 避免 bind() 职责膨胀；调用方一次性 dispatch input 触发即可）。
@@ -1108,6 +1118,13 @@ function buildWirePayload(omitImages = false) {
   if (mode === "img2img") {
     wire.image = omitImages ? "(base64 omitted)" : imgB64;
     wire.denoise_strength = parseFloat($("denoise").value);
+    // img2img 模式下用 crop canvas 的实际尺寸覆盖 size，
+    // 确保 LD 按 crop 分辨率生成（不使用用户设定的 size）
+    if (lastCropRegion) {
+      wire.size = lastCropRegion.targetSize;
+    }
+    // img2img 的 crop canvas 是正方形的，清除原图 aspect_ratio
+    delete wire.aspect_ratio;
     if ($("maskEnabled").checked && maskB64) {
       wire.mask = omitImages ? "(base64 omitted)" : maskB64;
     }
@@ -1249,6 +1266,8 @@ function parseSSEChunk(chunk) {
             setOutput(src);
             lastOutputB64 = src.split(",")[1];
             stitchFullToOriginal(src);
+            // 服务端合成：保存 temp 文件并生成 final.png
+            callServerCompose(lastPayload.image, data.png_image, mask);
           });
         } else {
           stitchFullToOriginal(rawSrc);
@@ -1258,6 +1277,8 @@ function parseSSEChunk(chunk) {
           setOutput(src);
           lastOutputB64 = src.split(",")[1];
           stitchFullToOriginal(src);
+          // 服务端合成：保存 temp 文件并生成 final.png
+          callServerCompose(lastPayload.image, data.png_image, mask);
         });
       } else {
         setOutput("data:image/png;base64," + data.png_image);
@@ -1294,12 +1315,15 @@ function parseSSEChunk(chunk) {
           const { x: ox, y: oy, origW, origH } = img2imgPaddingOffset;
           const gw = gen.naturalWidth,
             gh = gen.naturalHeight;
+          const sc2 = Math.min(ow / origW, oh / origH);
+          const sw2 = Math.round(origW * sc2),
+            sh2 = Math.round(origH * sc2);
           if (gw > origW) {
-            // Padded raw gen（1024×1024）— 从 padding offset 裁剪
-            ctx.drawImage(gen, ox, oy, origW, origH, 0, 0, origW, origH);
+            // Padded raw gen（1024×1024）— 从 padding offset 裁剪 scaled 区域
+            ctx.drawImage(gen, ox, oy, sw2, sh2, ox, oy, sw2, sh2);
           } else {
-            // 已裁减到原图尺寸（compositeInpaint 结果）— 1:1 覆盖
-            ctx.drawImage(gen, 0, 0, ow, oh);
+            // 已裁减到原图尺寸（compositeInpaint 结果）— 缩放到 scaled 尺寸后覆盖
+            ctx.drawImage(gen, 0, 0, origW, origH, ox, oy, sw2, sh2);
           }
         } else {
           // 裁剪案例：gen 缩放到 crop 区域大小后覆盖到 origin 上
@@ -1496,8 +1520,12 @@ async function sendToImg2img() {
   // SDXL 需要 1024×1024 画布；将非方形图加黑边填充
   const workB64 = isNonSquare ? await padImageToSquare(b64, 1024) : b64;
 
+  // 保存原始未填充图片（用于服务端合成 origin）
+  unpaddedImgB64 = b64;
   // 保存填充后的图片供 Download Full 合成使用（裁剪坐标基于填充后的画布）
   originalImgB64 = workB64;
+  // 重置 savedPaddingOffset
+  savedPaddingOffset = null;
   // 保存原图 unpadded 尺寸供裁剪坐标映射用
   origImgWidth = iw;
   origImgHeight = ih;
@@ -1575,6 +1603,123 @@ async function sendToImg2img() {
   $("automaskBtn").classList.remove("hidden");
   $("editMaskBtn").classList.remove("hidden");
   saveSession();
+  // 保存 origin.png 到服务端 temp（仅 unpadded 原图）
+  fetch("/save-temp", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name: "origin", b64: b64.replace(/^data:image\/png;base64,/, "") }),
+  }).catch(() => {});
+}
+
+// 服务端合成：将 crop_result 覆盖到 origin 上（调用 /compose 路由）
+async function serverCompose(originB64, cropB64, cropResultB64, pos, cropSize) {
+  const res = await fetch("/compose", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      origin_b64: originB64,
+      crop_b64: cropB64,
+      crop_result_b64: cropResultB64,
+      pos: pos,
+      crop_size: cropSize,
+    }),
+  });
+  if (!res.ok) throw new Error(`compose failed: ${res.status}`);
+  const data = await res.json();
+  if (data.error) throw new Error(data.error);
+  return "data:image/png;base64," + data.final_b64;
+}
+
+// 调用服务端合成，计算 crop 位置并发送
+async function callServerCompose(originB64, cropResultB64, maskB64) {
+  try {
+    // 使用原始未填充图片作为 origin
+    const origin = unpaddedImgB64 || originB64;
+
+    // 计算 crop 在 origin 上的位置和尺寸
+    let pos = { x: 0, y: 0 };
+    let cropSize = { w: 1024, h: 1024 };
+
+    if (lastCropRegion && savedPaddingOffset) {
+      const { cropX, cropY, cropScale, targetSize } = lastCropRegion;
+      const { x: ox, y: oy, origW, origH } = savedPaddingOffset;
+
+      // padding 缩放比
+      const padScale = Math.min(1024 / origW, 1024 / origH);
+
+      // crop 在 padded 图上的位置
+      const cropL = -cropX / cropScale;
+      const cropT = -cropY / cropScale;
+
+      // 转换到 unpadded 图上的位置
+      pos.x = Math.round((cropL - ox) / padScale);
+      pos.y = Math.round((cropT - oy) / padScale);
+
+      // crop 区域在 origin 上的实际尺寸
+      cropSize.w = Math.round(targetSize / cropScale / padScale);
+      cropSize.h = Math.round(targetSize / cropScale / padScale);
+    } else if (lastCropRegion) {
+      const { cropX, cropY, cropScale, targetSize } = lastCropRegion;
+      pos.x = Math.round(-cropX / cropScale);
+      pos.y = Math.round(-cropY / cropScale);
+      cropSize.w = Math.round(targetSize / cropScale);
+      cropSize.h = Math.round(targetSize / cropScale);
+    }
+
+    // 发送 origin 图和 crop 图（base64 不含前缀）
+    const originPure = origin.replace(/^data:image\/png;base64,/, "");
+    const cropPure = (imgB64 || "").replace(/^data:image\/png;base64,/, "");
+
+    await serverCompose(originPure, cropPure, cropResultB64, pos, cropSize);
+    console.log("Server compose saved to temp/");
+  } catch (e) {
+    console.error("Server compose failed:", e);
+  }
+}
+
+// 对遮罩做 box blur（分离式水平+垂直），返回新的 Uint8ClampedArray
+function boxBlurMask(data, width, height, radius) {
+  const len = data.length;
+  const temp = new Float32Array(width * height);
+  const result = new Float32Array(width * height);
+  // 提取红通道作为浮点（遮罩是灰度图）
+  for (let i = 0; i < width * height; i++) result[i] = data[i * 4] / 255;
+  // 水平 pass
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      let sum = 0,
+        count = 0;
+      for (let k = -radius; k <= radius; k++) {
+        const sx = Math.min(Math.max(x + k, 0), width - 1);
+        sum += result[y * width + sx];
+        count++;
+      }
+      temp[y * width + x] = sum / count;
+    }
+  }
+  // 垂直 pass
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      let sum = 0,
+        count = 0;
+      for (let k = -radius; k <= radius; k++) {
+        const sy = Math.min(Math.max(y + k, 0), height - 1);
+        sum += temp[sy * width + x];
+        count++;
+      }
+      result[y * width + x] = sum / count;
+    }
+  }
+  // 写回 RGBA
+  const out = new Uint8ClampedArray(len);
+  for (let i = 0; i < width * height; i++) {
+    const v = Math.round(result[i] * 255);
+    out[i * 4] = v;
+    out[i * 4 + 1] = v;
+    out[i * 4 + 2] = v;
+    out[i * 4 + 3] = 255;
+  }
+  return out;
 }
 
 async function compositeInpaint(origB64, genB64, maskB64) {
@@ -1589,7 +1734,22 @@ async function compositeInpaint(origB64, genB64, maskB64) {
   const ow = origImg.naturalWidth,
     oh = origImg.naturalHeight;
 
-  // (featherMask 已移除 — 未使用；合成直接做硬遮罩混合)
+  // 对遮罩做高斯模糊羽化，让合成边界平滑过渡（radius=5 像素）
+  const featherRadius = 5;
+  const maskCanvas = document.createElement("canvas");
+  maskCanvas.width = maskImg.naturalWidth;
+  maskCanvas.height = maskImg.naturalHeight;
+  const maskCtx = maskCanvas.getContext("2d");
+  maskCtx.drawImage(maskImg, 0, 0);
+  const maskImageData = maskCtx.getImageData(0, 0, maskCanvas.width, maskCanvas.height);
+  const blurred = boxBlurMask(
+    maskImageData.data,
+    maskCanvas.width,
+    maskCanvas.height,
+    featherRadius,
+  );
+  maskCtx.putImageData(new ImageData(blurred, maskCanvas.width, maskCanvas.height), 0, 0);
+  const featheredMaskImg = maskCanvas;
 
   if (img2imgPaddingOffset) {
     // 填充案例：在 1024×1024 padded space 合成（三者坐标对齐），最后裁剪
@@ -1605,16 +1765,14 @@ async function compositeInpaint(origB64, genB64, maskB64) {
     ctx.drawImage(origImg, 0, 0, padded, padded);
     const origData = ctx.getImageData(0, 0, padded, padded);
 
-    // 生成图（放到偏移位置，用生成图自身尺寸而非 padded 尺寸）
-    const gw = genImg.naturalWidth,
-      gh = genImg.naturalHeight;
+    // 生成图（已在 padded 坐标空间，直接绘制到 (0,0)）
     ctx.clearRect(0, 0, padded, padded);
-    ctx.drawImage(genImg, ox, oy, gw, gh);
+    ctx.drawImage(genImg, 0, 0, padded, padded);
     const genData = ctx.getImageData(0, 0, padded, padded);
 
-    // 遮罩（padded 尺寸）
+    // 遮罩（padded 尺寸，使用羽化后的遮罩）
     ctx.clearRect(0, 0, padded, padded);
-    ctx.drawImage(maskImg, 0, 0, padded, padded);
+    ctx.drawImage(featheredMaskImg, 0, 0, padded, padded);
     const maskData = ctx.getImageData(0, 0, padded, padded);
 
     // 合成
@@ -1628,12 +1786,15 @@ async function compositeInpaint(origB64, genB64, maskB64) {
     }
     ctx.putImageData(out, 0, 0);
 
-    // 裁剪回原始尺寸（从 padding offset 取原始 unpadded 尺寸）
+    // 裁剪回原始尺寸：从 padding offset 取 scaled 区域再缩回原尺寸
     const { origW, origH } = img2imgPaddingOffset;
+    const sc = Math.min(padded / origW, padded / origH);
+    const sw = Math.round(origW * sc),
+      sh = Math.round(origH * sc);
     const crop = document.createElement("canvas");
     crop.width = origW;
     crop.height = origH;
-    crop.getContext("2d").drawImage(off, ox, oy, origW, origH, 0, 0, origW, origH);
+    crop.getContext("2d").drawImage(off, ox, oy, sw, sh, 0, 0, origW, origH);
     return crop.toDataURL("image/png");
   }
 
@@ -1665,7 +1826,7 @@ async function compositeInpaint(origB64, genB64, maskB64) {
   const genData = ctx.getImageData(0, 0, ow, oh);
 
   ctx.clearRect(0, 0, ow, oh);
-  ctx.drawImage(maskImg, drawX, drawY, drawW, drawH);
+  ctx.drawImage(featheredMaskImg, drawX, drawY, drawW, drawH);
   const maskData = ctx.getImageData(0, 0, ow, oh);
 
   const out = ctx.createImageData(ow, oh);

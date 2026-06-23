@@ -43,18 +43,24 @@ uv run python app.py
 
 ### 后端 (app.py)
 
-Flask 服务器，共 6 个路由：
+Flask 服务器，共 8 个路由：
 
-| 路由        | 方法 | 说明                       |
-| ----------- | ---- | -------------------------- |
-| `/`         | GET  | 渲染前端页面               |
-| `/health`   | GET  | 探测 Local Dream 可达性    |
-| `/generate` | POST | 代理生成请求，SSE 流式返回 |
-| `/automask` | POST | Hugging Face 衣物分割      |
-| `/tokenize` | POST | 查询 prompt token 计数     |
-| `/upscale`  | POST | 图片无损放大               |
+| 路由         | 方法 | 说明                       |
+| ------------ | ---- | -------------------------- |
+| `/`          | GET  | 渲染前端页面               |
+| `/health`    | GET  | 探测 Local Dream 可达性    |
+| `/automask`  | POST | Hugging Face 衣物分割      |
+| `/tokenize`  | POST | 查询 prompt token 计数     |
+| `/upscale`   | POST | 图片无损放大               |
+| `/save-temp` | POST | 保存图片用于重绘合成       |
+| `/compose`   | POST | 将重绘结果合成回原图       |
+| `/generate`  | POST | 代理生成请求，SSE 流式返回 |
 
 SSE 事件流由 `sse.py` 处理 —— raw RGB 字节转 PNG base64，progress 事件附加百分比。
+
+工具模块：
+
+- `lib/log.py` — 结构化 JSON 日志，带关联 ID 和滚动文件处理器
 
 ### 前端 (templates/index.html)
 
@@ -71,9 +77,9 @@ SSE 事件流由 `sse.py` 处理 —— raw RGB 字节转 PNG base64，progress 
 uv run python app.py            # 启动服务 (http://0.0.0.0:5000)
 
 # 测试
-uv run pytest                   # 70 个 Python 测试（约 1 秒）
-uv run pytest -m "not performance"  # 跳过性能测试（66 个）
-uv run pytest --cov             # 含覆盖率报告（>90%）
+uv run pytest                   # 93 个 Python 测试（约 1 秒）
+uv run pytest -m "not performance"  # 跳过性能测试
+uv run pytest --cov             # 含覆盖率报告
 bun test                        # 87 个 JS 测试（约 80 毫秒）
 
 # 代码质量
@@ -84,13 +90,13 @@ bun prettier --write .          # 格式化 HTML / CSS / JS
 
 ## 测试覆盖率
 
-| 模块            | 覆盖率  | 测试数                             |
-| --------------- | ------- | ---------------------------------- |
-| `sse.py`        | 100%    | 24 Python                          |
-| `app.py`        | 93%     | 46 Python                          |
-| `params.js`     | —       | 56 JS                              |
-| `sse-client.js` | —       | 17 JS                              |
-| **总计**        | **95%** | **70 Python + 87 JS = 157 个测试** |
+| 模块            | 覆盖率 | 测试数                             |
+| --------------- | ------ | ---------------------------------- |
+| `sse.py`        | 100%   | 24 Python                          |
+| `app.py`        | 87%    | 69 Python                          |
+| `params.js`     | —      | 56 JS                              |
+| `sse-client.js` | —      | 17 JS                              |
+| **总计**        | **—**  | **93 Python + 87 JS = 180 个测试** |
 
 ## 可信后端白名单
 
@@ -107,6 +113,13 @@ export LD_ALLOWED_HOSTS="127.0.0.1:8081,192.168.1.100:8081"
 - 所有生成在本地运行 —— 数据不离开你的网络
 - 自动遮罩使用 Hugging Face 的托管推理 API（需要 HF_TOKEN）
 - 无遥测、无分析、无外部请求（LD 和 Hugging Face 除外）
+
+## 已知问题 / 修复
+
+- **遮罩笔刷不透明** — 遮罩编辑器的笔刷改为完全不透明白色（`#ffffff`），替代之前的 95% 不透明度。旧版产生的遮罩值约为 242/255，导致重绘区域仅应用了 95% 的生成图。
+- **重绘 padding 坐标对齐** — `compositeInpaint` 和 `stitchFullToOriginal` 的 padding 分支中存在三个坐标 bug：原图 unpadded 尺寸（`origW/origH`）被错误用于 scaled canvas 的 drawImage 源矩形和放置坐标。修复：padding 分支全部改用缩放后的尺寸（`sw/sh`）。
+- **宽高比污染图生图** — 发送到 img2img 时，原图的 `aspect_ratio`（如 "3:4"）被带到 crop canvas 的请求中，导致 LD 输出错误分辨率。修复：`buildWirePayload` 在 img2img 模式下 `delete wire.aspect_ratio`。
+- **crop_result 分辨率不匹配** — LD 返回 768×1024 而非 1024×1024，原因同上（aspect_ratio 覆盖 size）。修复同上。
 
 ## 致谢
 

@@ -14,13 +14,14 @@
 
 ## Repo at a glance
 
-- `app.py` — Flask server（6 个路由）+ `resolve_ld_url` / `HFAutomask` / `LD_ALLOWED_HOSTS` allowlist
+- `app.py` — Flask server（8 个路由）+ `resolve_ld_url` / `HFAutomask` / `LD_ALLOWED_HOSTS` allowlist
 - `sse.py` — SSE 解析 + 事件类型注册表（`complete` + `progress` 两个 handler）
 - `templates/index.html` — 整站前端，纯 HTML/CSS/JS，单文件，**无构建步骤**
 - `static/app.js` — 前端主逻辑（从 `index.html` 提取的内联 script，作为独立 module 加载）
 - `static/params.js` — 参数表单工厂（`createParamsForm` / `createParamsPayload`）
 - `static/sse-client.js` — SSE 客户端协议层（`parse` / `extractPercent` / `events`）
-- `tests/` — 70 个 pytest 测试（`test_sse.py` / `test_app.py` / `test_routes.py`）
+- `lib/log.py` — 结构化 JSON 日志系统（关联 ID、滚动文件、Flask 中间件）
+- `tests/` — 93 个 pytest 测试（`test_sse.py` / `test_app.py` / `test_routes.py` / `test_log.py`）
 - `tests-js/` — 87 个 bun:test（`params-form.test.js` / `params-payload.test.js` / `sse-client.test.js`）
 - `CONTEXT.md` — 领域词汇与接缝状态
 
@@ -34,7 +35,7 @@
 ## 测试
 
 ```shell
-uv run pytest                # 70 个 Python 测试
+uv run pytest                # 93 个 Python 测试
 uv run pytest -m "not performance"  # 跳过性能测试
 uv run pytest --cov          # 含覆盖率报告（sse.py 100%, app.py 87%）
 bun test                     # 87 个 JS 测试
@@ -91,6 +92,8 @@ Mock 策略：`app.requests.post` / `app.requests.get` / `app.requests.head` 全
 ### 后端（`app.py` / API）
 
 - **aspect_ratio 需要 size=1024**：`aspect_ratio` 是 SDXL 特性，需配合 `size=1024` 使用。如果用户选了比例（如 2:3）但 size 是 512，LD 会忽略比例直接出方形图。修复：`buildWirePayload` 中检测到 `aspect_ratio` 非 none 时强制设 `wire.size = 1024`。
+- **img2img 模式下清除 aspect_ratio**：发送到 img2img 时，原图的宽高比（3:4 等）被带到 crop canvas 请求中，LD 用它覆盖 `size=1024`，输出错误分辨率。修复：`buildWirePayload` 在 img2img 分支 `delete wire.aspect_ratio`。
+- **compositeInpaint padding 坐标**：padding 分支中原图在 padded canvas 上占用的尺寸是 scaled 尺寸 (`sw=round(origW*sc)`)，而非原始 `origW/origH`。`drawImage` 源矩形、裁剪源尺寸、stitchFullToOriginal 放置坐标都必须用 scaled 尺寸。
 
 <!-- BEGIN BEADS CODEX SETUP -->
 

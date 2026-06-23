@@ -456,3 +456,131 @@ def test_route_dispatch_end_to_end_under_50ms():
     assert response.status_code == 200
     assert "data: [DONE]\n\n" in body
     assert elapsed_ms < 50, f"end-to-end dispatch took {elapsed_ms:.1f}ms (expected < 50ms)"
+
+
+# --- /save-temp 集成 ---
+
+
+def _make_minimal_png_b64() -> str:
+    """生成 1x1 白像素的 PNG base64。"""
+    import io as io_module
+
+    from PIL import Image as PILImage
+    buf = io_module.BytesIO()
+    PILImage.new("RGB", (1, 1), (255, 255, 255)).save(buf, format="PNG")
+    return base64.b64encode(buf.getvalue()).decode()
+
+
+def test_save_temp_saves_file(client):
+    """POST /save-temp 保存文件并返回尺寸。"""
+    b64 = _make_minimal_png_b64()
+    resp = client.post("/save-temp", json={"name": "testimg", "b64": b64})
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data["ok"] is True
+    assert data["size"] == [1, 1]
+
+
+def test_save_temp_missing_name_400(client):
+    """缺 name 返回 400。"""
+    resp = client.post("/save-temp", json={"b64": "abc"})
+    assert resp.status_code == 400
+
+
+def test_save_temp_missing_b64_400(client):
+    """缺 b64 返回 400。"""
+    resp = client.post("/save-temp", json={"name": "x"})
+    assert resp.status_code == 400
+
+
+def test_save_temp_invalid_b64_500(client):
+    """非法 base64 返回 500。"""
+    resp = client.post("/save-temp", json={"name": "x", "b64": "!!!not-base64!!!"})
+    assert resp.status_code == 500
+
+
+# --- /compose 集成 ---
+
+
+def test_compose_missing_origin_400(client):
+    """缺 origin_b64 返回 400。"""
+    resp = client.post("/compose", json={"crop_result_b64": _make_minimal_png_b64()})
+    assert resp.status_code == 400
+
+
+def test_compose_missing_crop_result_400(client):
+    """缺 crop_result_b64 返回 400。"""
+    resp = client.post("/compose", json={"origin_b64": _make_minimal_png_b64()})
+    assert resp.status_code == 400
+
+
+def test_compose_returns_composited_image(client):
+    """POST /compose 返回 final.png base64。"""
+    white = _make_minimal_png_b64()
+    resp = client.post("/compose", json={
+        "origin_b64": white,
+        "crop_b64": white,
+        "crop_result_b64": white,
+        "pos": {"x": 0, "y": 0},
+        "crop_size": {"w": 1, "h": 1},
+    })
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert "final_b64" in data
+
+
+def test_compose_without_crop_b64_works(client):
+    """不传 crop_b64 也能合成（仅用 origin + crop_result）。"""
+    white = _make_minimal_png_b64()
+    resp = client.post("/compose", json={
+        "origin_b64": white,
+        "crop_result_b64": white,
+        "pos": {"x": 0, "y": 0},
+        "crop_size": {"w": 1, "h": 1},
+    })
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert "final_b64" in data
+
+
+def test_compose_resizes_crop_result(client):
+    """crop_size 和 crop_result 不一致时做缩放。"""
+    import io as io_module
+
+    from PIL import Image as PILImage
+
+    # origin: 2x2
+    buf = io_module.BytesIO()
+    PILImage.new("RGB", (2, 2), (255, 0, 0)).save(buf, format="PNG")
+    origin_b64 = base64.b64encode(buf.getvalue()).decode()
+
+    # crop_result: 4x4
+    buf2 = io_module.BytesIO()
+    PILImage.new("RGB", (4, 4), (0, 255, 0)).save(buf2, format="PNG")
+    crop_b64 = base64.b64encode(buf2.getvalue()).decode()
+
+    # target crop_size: 2x2（要求压缩）
+    resp = client.post("/compose", json={
+        "origin_b64": origin_b64,
+        "crop_result_b64": crop_b64,
+        "pos": {"x": 0, "y": 0},
+        "crop_size": {"w": 2, "h": 2},
+    })
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert "final_b64" in data
+    # 验证 final 是 2x2
+    final_bytes = base64.b64decode(data["final_b64"])
+    final_img = PILImage.open(io_module.BytesIO(final_bytes))
+    assert final_img.size == (2, 2)
+
+
+def test_compose_invalid_b64_500(client):
+    """非法 base64 → 500。"""
+    resp = client.post("/compose", json={
+        "origin_b64": "!!!bad!!!",
+        "crop_result_b64": _make_minimal_png_b64(),
+        "pos": {"x": 0, "y": 0},
+        "crop_size": {"w": 1, "h": 1},
+    })
+    assert resp.status_code == 500

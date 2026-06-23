@@ -8,10 +8,18 @@ import requests
 from flask import Flask, Response, jsonify, render_template, request, stream_with_context
 from PIL import Image
 
+from lib import log
 from sse import EVENT_HANDLERS, parse_sse, passthrough
 
 app = Flask(__name__)
 DEFAULT_LD_URL = "http://127.0.0.1:8081"
+
+# 初始化日志系统（注册 before_request / after_request 中间件）
+log.init_app(app)
+
+# temp 目录用于保存合成过程中的临时文件
+TEMP_DIR = Path(__file__).parent / "temp"
+TEMP_DIR.mkdir(exist_ok=True)
 
 
 def _parse_netloc(url: str) -> str:
@@ -225,12 +233,109 @@ def upscale():
         return jsonify({"error": str(e)}), 502
 
 
+@app.route("/save-temp", methods=["POST"])
+def save_temp():
+    """保存 base64 图片到 temp/ 文件夹（调试用）。"""
+    data = request.json
+    name = data.get("name", "")
+    b64 = data.get("b64", "")
+    if not name or not b64:
+        return jsonify({"error": "Missing name or b64"}), 400
+    try:
+        img_bytes = base64.b64decode(b64)
+        img = Image.open(io.BytesIO(img_bytes)).convert("RGB")
+        img.save(TEMP_DIR / f"{name}.png")
+        log.log_operation("save-temp", name=name, size=list(img.size))
+        return jsonify({"ok": True, "size": list(img.size)})
+    except Exception as e:
+        log.log_error("save-temp failed", exc_info=e, name=name)
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/compose", methods=["POST"])
+def compose():
+    """服务端合成：将 crop_result 覆盖到 origin 上。
+
+    接收 JSON:
+      - origin_b64: 原图 base64 (txt2img 结果)
+      - crop_b64: 裁切后的图 base64 (img2img 输入)
+      - crop_result_b64: img2img 生成结果 base64
+      - pos: {x, y} crop 在 origin 上的左上角坐标
+      - crop_size: {w, h} crop_result 缩放目标分辨率
+
+    返回: 合成后的 final.png base64
+    """
+    data = request.json
+    origin_b64 = data.get("origin_b64", "")
+    crop_b64 = data.get("crop_b64", "")
+    crop_result_b64 = data.get("crop_result_b64", "")
+    pos = data.get("pos", {})
+    crop_size = data.get("crop_size", {})
+
+    if not origin_b64 or not crop_result_b64:
+        return jsonify({"error": "Missing origin_b64 or crop_result_b64"}), 400
+
+    try:
+        # 解码图片
+        origin_bytes = base64.b64decode(origin_b64)
+        crop_result_bytes = base64.b64decode(crop_result_b64)
+
+        origin_img = Image.open(io.BytesIO(origin_bytes)).convert("RGB")
+        crop_result_img = Image.open(io.BytesIO(crop_result_bytes)).convert("RGB")
+
+        # 保存临时文件（调试用）
+        origin_img.save(TEMP_DIR / "origin.png")
+        crop_result_img.save(TEMP_DIR / "crop_result.png")
+        if crop_b64:
+            crop_bytes = base64.b64decode(crop_b64)
+            crop_img = Image.open(io.BytesIO(crop_bytes)).convert("RGB")
+            crop_img.save(TEMP_DIR / "crop.png")
+
+        # 缩放 crop_result 到 crop 区域在 origin 上的实际尺寸（以 crop_size 为准）
+        target_w = crop_size.get("w", crop_result_img.width)
+        target_h = crop_size.get("h", crop_result_img.height)
+        if crop_result_img.width != target_w or crop_result_img.height != target_h:
+            crop_result_img = crop_result_img.resize((target_w, target_h), Image.Resampling.LANCZOS)
+
+        # 保存 pos.txt 和 size.txt（调试用）
+        (TEMP_DIR / "pos.txt").write_text(
+            f"x={pos.get('x', 0)}\ny={pos.get('y', 0)}\nw={target_w}\nh={target_h}"
+        )
+        (TEMP_DIR / "size.txt").write_text(f"w={target_w}\nh={target_h}")
+        log.log_operation(
+            "compose",
+            origin_size=list(origin_img.size),
+            crop_size=list(crop_img.size) if crop_b64 else None,
+            crop_result_size=list(crop_result_img.size),
+            target_size=[target_w, target_h],
+            pos={"x": pos.get("x", 0), "y": pos.get("y", 0)},
+        )
+
+        # 覆盖到 origin 上
+        final_img = origin_img.copy()
+        final_img.paste(crop_result_img, (pos.get("x", 0), pos.get("y", 0)))
+
+        # 保存 final.png
+        final_img.save(TEMP_DIR / "final.png")
+
+        # 返回 base64
+        buf = io.BytesIO()
+        final_img.save(buf, format="PNG")
+        final_b64 = base64.b64encode(buf.getvalue()).decode("ascii")
+
+        return jsonify({"final_b64": final_b64})
+    except Exception as e:
+        log.log_error("compose failed", exc_info=e)
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route("/generate", methods=["POST"])
 def generate():
     payload = request.json
 
     def stream():
         ld_url = resolve_ld_url(payload.pop("local_dream_url", None))
+        event_count = 0
         try:
             with requests.post(
                 f"{ld_url}/generate",
@@ -240,16 +345,21 @@ def generate():
             ) as r:
                 for event in parse_sse(r.iter_lines()):
                     if event.data == "[DONE]":
+                        log.log_operation("generate-done", ld_url=ld_url, event_count=event_count)
                         yield "data: [DONE]\n\n"
                         return
                     handler = EVENT_HANDLERS.get(event.type, passthrough)
                     new_data = handler(event.data)
                     if new_data is None:
                         continue
+                    event_count += 1
+                    data_size = len(new_data)
+                    log.log_sse(event.type, data_size, corr_id=log.get_corr_id())
                     if event.type:
                         yield f"event: {event.type}\n"
                     yield f"data: {new_data}\n\n"
         except requests.exceptions.ConnectionError:
+            log.log_error("Local Dream connection error", ld_url=ld_url)
             yield (
                 "data: "
                 + json.dumps(
@@ -258,6 +368,7 @@ def generate():
                 + "\n\n"
             )
         except Exception as e:
+            log.log_error("generate stream error", exc_info=e, ld_url=ld_url)
             yield "data: " + json.dumps({"type": "error", "error": str(e)}) + "\n\n"
 
     return Response(stream_with_context(stream()), mimetype="text/event-stream")

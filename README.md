@@ -43,18 +43,24 @@ Open http://localhost:5000 in a browser. Local Dream must be running on `127.0.0
 
 ### Backend (app.py)
 
-Flask server with 6 routes:
+Flask server with 8 routes:
 
-| Route       | Method | Description                           |
-| ----------- | ------ | ------------------------------------- |
-| `/`         | GET    | Renders frontend                      |
-| `/health`   | GET    | Probes Local Dream reachability       |
-| `/generate` | POST   | Proxies generation with SSE streaming |
-| `/automask` | POST   | Hugging Face clothing segmentation    |
-| `/tokenize` | POST   | Prompt token count from Local Dream   |
-| `/upscale`  | POST   | Image upscaling via Local Dream       |
+| Route        | Method | Description                              |
+| ------------ | ------ | ---------------------------------------- |
+| `/`          | GET    | Renders frontend                         |
+| `/health`    | GET    | Probes Local Dream reachability          |
+| `/automask`  | POST   | Hugging Face clothing segmentation       |
+| `/tokenize`  | POST   | Prompt token count from Local Dream      |
+| `/upscale`   | POST   | Image upscaling via Local Dream          |
+| `/save-temp` | POST   | Save images for inpainting composite     |
+| `/compose`   | POST   | Composite inpainted result onto original |
+| `/generate`  | POST   | Proxies generation with SSE streaming    |
 
 SSE event stream processed in `sse.py` — raw RGB bytes converted to PNG base64, progress enriched with percent.
+
+Utility modules:
+
+- `lib/log.py` — structured JSON logging with correlation IDs, rotating file handlers
 
 ### Frontend (templates/index.html)
 
@@ -71,9 +77,9 @@ Reusable modules under `/static/`:
 uv run python app.py          # Start server (http://0.0.0.0:5000)
 
 # Tests
-uv run pytest                 # 70 Python tests (~1s)
-uv run pytest -m "not performance"  # Skip perf tests (66 tests)
-uv run pytest --cov           # With coverage report (>90%)
+uv run pytest                 # 93 Python tests (~1s)
+uv run pytest -m "not performance"  # Skip perf tests
+uv run pytest --cov           # With coverage report
 bun test                      # 87 JS tests (~80ms)
 
 # Code quality
@@ -87,10 +93,10 @@ bun prettier --write .        # Format HTML / CSS / JS
 | Module          | Coverage | Tests                             |
 | --------------- | -------- | --------------------------------- |
 | `sse.py`        | 100%     | 24 Python tests                   |
-| `app.py`        | 93%      | 46 Python tests                   |
+| `app.py`        | 87%      | 69 Python tests                   |
 | `params.js`     | —        | 56 JS tests (payload + form)      |
 | `sse-client.js` | —        | 17 JS tests                       |
-| **Total**       | **95%**  | **70 Python + 87 JS = 157 tests** |
+| **Total**       | **—**    | **93 Python + 87 JS = 180 tests** |
 
 ## Trusted-host Allowlist
 
@@ -111,6 +117,9 @@ When configured, URLs not on the list silently fall back to the default — no e
 ## Known Issues / Fixes
 
 - **Mask brush opacity** — mask editor brush now uses fully opaque white (`#ffffff`) instead of 95% opacity. Previous versions produced masks with ~242/255 values, causing only 95% of the generated image to be applied in inpaint regions.
+- **Inpainting padding coordinate alignment** — three coordinate bugs in `compositeInpaint` and `stitchFullToOriginal` padding branch where original unpadded dimensions (`origW/origH`) were used instead of scaled dimensions (`sw/sh`). Fixed: drawImage source rects and placement coordinates now correctly use scaled dimensions on the padded canvas.
+- **Aspect ratio contaminating img2img** — when sending to img2img, the original image's `aspect_ratio` (e.g. "3:4") was sent to LD alongside the crop canvas, causing LD to output at the wrong resolution. Fixed: `buildWirePayload` deletes `wire.aspect_ratio` in img2img mode.
+- **Crop result resolution mismatch** — LD returned 768×1024 instead of 1024×1024 for the crop canvas because `wire.aspect_ratio` overrode `wire.size=1024`. Fixed by clearing aspect_ratio in img2img mode (same as above).
 
 ## Acknowledgements
 
