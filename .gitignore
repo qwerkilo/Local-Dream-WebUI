@@ -12,6 +12,16 @@ docs/
 # Runtime artifacts
 *.heapsnapshot
 
+# Temp files for inpainting compose
+temp/
+
+# Log files (lib/log.py)
+logs/
+
+# Node dependencies
+node_modules/
+.bun/
+
 # Beads / Dolt files (added by bd init)
 .dolt/
 *.db
